@@ -69,3 +69,6 @@ button, input, textarea, select { font: inherit; }
   0%   { background-position: -200% center; }
   100% { background-position:  200% center; }
 }
+
+html { scroll-behavior: smooth; }
+body { overflow-x: hidden; }

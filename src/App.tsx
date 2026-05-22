@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import {
   motion, AnimatePresence,
   useMotionValue, useTransform, useSpring,
@@ -10,6 +10,7 @@ import {
   Plus, Menu, X, Scissors, ArrowUpRight, BadgeCheck,
   LogIn, UserPlus, Eye, EyeOff, Phone, Lock, Mail,
   Building2, LogOut, Sparkles, Crown,
+  Zap, MessageCircle, ArrowRight, Shield,
 } from 'lucide-react'
 
 // ══════════════════════════════════════════════════════════════
@@ -88,6 +89,92 @@ const REVENUE_DATA = [
   { day: 'Sáb', value: 3200 },
   { day: 'Dom', value: 980  },
 ]
+
+// ══════════════════════════════════════════════════════════════
+// LANDING DATA
+// ══════════════════════════════════════════════════════════════
+const LANDING_FEATURES = [
+  { icon: Calendar,       title: 'Agendamento Online',      desc: 'Clientes agendam 24/7 pelo celular, sem telefonema. Confirmação automática.' },
+  { icon: Users,          title: 'Gestão de Equipe',        desc: 'Agenda e desempenho individual por barbeiro. Cada profissional vê sua rota.' },
+  { icon: Package,        title: 'Controle de Estoque',     desc: 'Alertas quando produtos acabam. Histórico de uso e baixa rápida por item.' },
+  { icon: BarChart2,      title: 'Relatórios Avançados',    desc: 'Faturamento, ticket médio, ocupação — dados que viram decisões inteligentes.' },
+  { icon: MessageCircle,  title: 'Notificações WhatsApp',   desc: 'Lembretes automáticos reduzem no-show em até 80%. Zero esforço manual.' },
+  { icon: Zap,            title: 'Automação Total',         desc: 'Workflows inteligentes cuidam do operacional enquanto você foca no cliente.' },
+]
+
+const TESTIMONIALS_DATA = [
+  { name: 'Ricardo Borges', shop: 'Borges Barber · São Paulo',       avatar: 'RB', text: 'Reduzimos 80% dos no-shows com os lembretes automáticos. O sistema se pagou no primeiro mês.' },
+  { name: 'André Lemos',    shop: 'Studio Lemos · Belo Horizonte',   avatar: 'AL', text: 'A visibilidade financeira é incrível. Sei exatamente quanto entrou e saiu a cada dia.' },
+  { name: 'Marcos Teles',   shop: 'Teles Premium · Rio de Janeiro',  avatar: 'MT', text: 'Cada barbeiro tem sua própria visão da agenda. Acabou a confusão e o retrabalho na equipe.' },
+]
+
+const PRICING_DATA = [
+  {
+    name: 'Básico', price: 'Grátis', period: '',      recommended: false,
+    features: ['1 barbeiro', '50 agendamentos/mês', 'Agendamento online', 'Dashboard básico'],
+    cta: 'Começar Grátis',
+  },
+  {
+    name: 'Pro',    price: 'R$ 97', period: '/mês',   recommended: true,
+    features: ['Até 5 barbeiros', 'Agendamentos ilimitados', 'Notificações WhatsApp', 'Relatórios completos', 'Controle de estoque', 'Suporte prioritário'],
+    cta: 'Começar Agora',
+  },
+  {
+    name: 'Business', price: 'R$ 197', period: '/mês', recommended: false,
+    features: ['Barbeiros ilimitados', 'Multi-unidades', 'API de integração', 'Gestor dedicado', 'SLA 99.9%', 'Onboarding personalizado'],
+    cta: 'Falar com Vendas',
+  },
+]
+
+const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
+  id: i,
+  left: `${8 + (i * 17 + 11) % 84}%`,
+  top:  `${4 + (i * 23 + 7)  % 92}%`,
+  size: 1.4 + (i % 4) * 0.5,
+  dur:  7   + (i % 5) * 1.8,
+  delay: i  * 0.38,
+  amp:  14  + (i % 4) * 8,
+}))
+
+// ══════════════════════════════════════════════════════════════
+// TECH GRID + PARTICLES
+// ══════════════════════════════════════════════════════════════
+function TechGrid() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <svg className="absolute inset-0 w-full h-full" style={{ opacity: 0.035 }}>
+        <defs>
+          <pattern id="tg" width="52" height="52" patternUnits="userSpaceOnUse">
+            <path d="M 52 0 L 0 0 0 52" fill="none" stroke="rgba(212,175,55,1)" strokeWidth="0.6"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#tg)" />
+      </svg>
+      <motion.div
+        animate={{ x: ['-2%', '102%'] }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'linear', repeatDelay: 4 }}
+        className="absolute inset-y-0 w-px opacity-20"
+        style={{ background: 'linear-gradient(to bottom, transparent, rgba(212,175,55,0.6), transparent)' }}
+      />
+    </div>
+  )
+}
+
+function FloatingParticles() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {PARTICLES.map(p => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full"
+          style={{ left: p.left, top: p.top, width: p.size, height: p.size, background: 'rgba(212,175,55,0.5)' }}
+          animate={{ y: [0, -p.amp, 0], opacity: [0.15, 0.65, 0.15] }}
+          transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
+        />
+      ))}
+    </div>
+  )
+}
 
 // ══════════════════════════════════════════════════════════════
 // AMBIENT BACKGROUND
@@ -212,14 +299,128 @@ function AuthInput({
 }
 
 // ══════════════════════════════════════════════════════════════
-// AUTH SCREEN
+// MINI CHART (hero mockup)
 // ══════════════════════════════════════════════════════════════
-function AuthScreen({ users, onAuth, onRegister }: {
+function MiniChart() {
+  const data = [42, 68, 51, 85, 96, 112, 78]
+  const max = Math.max(...data)
+  const W = 260, H = 55
+  const pts = data.map((v, i) => ({ x: (i / (data.length - 1)) * W, y: H - (v / max) * H * 0.82 }))
+  const line = pts.reduce((a, p, i) => {
+    if (i === 0) return `M ${p.x} ${p.y}`
+    const cx = (pts[i-1].x + p.x) / 2
+    return `${a} C ${cx} ${pts[i-1].y}, ${cx} ${p.y}, ${p.x} ${p.y}`
+  }, '')
+  const fill = `${line} L ${pts.at(-1)!.x} ${H} L ${pts[0].x} ${H} Z`
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 55 }}>
+      <defs>
+        <linearGradient id="mcFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#D4AF37" stopOpacity="0.28"/>
+          <stop offset="100%" stopColor="#D4AF37" stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <motion.path d={fill} fill="url(#mcFill)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.8 }}/>
+      <motion.path d={line} fill="none" stroke="#D4AF37" strokeWidth="2"
+        initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+        transition={{ duration: 1.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}/>
+    </svg>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// DASHBOARD MOCKUP (hero right side)
+// ══════════════════════════════════════════════════════════════
+function DashboardMockup() {
+  return (
+    <TiltCard className="rounded-2xl overflow-hidden relative" style={{
+      background: 'rgba(7,7,7,0.93)',
+      border: '1px solid rgba(255,255,255,0.07)',
+      boxShadow: '0 60px 120px rgba(0,0,0,0.6), 0 0 80px rgba(212,175,55,0.07)',
+    }}>
+      {/* chrome */}
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,255,255,0.012)' }}>
+        <div className="flex items-center gap-2.5">
+          <div className="flex gap-1.5">
+            {['rgba(239,68,68,0.7)','rgba(245,158,11,0.7)','rgba(34,197,94,0.7)'].map((c,i)=>(
+              <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ background: c }}/>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Scissors size={9} style={{ color: '#D4AF37' }}/>
+            <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', fontFamily: "'DM Sans',sans-serif" }}>Legacy Barber — Dashboard</span>
+          </div>
+        </div>
+      </div>
+      <div className="p-4 space-y-3">
+        {/* stats */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: 'Faturamento', value: 'R$ 1.240', gold: true  },
+            { label: 'Clientes',    value: '8 hoje',   gold: false },
+            { label: 'Ocupação',    value: '78%',      gold: false },
+          ].map((s, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 + i * 0.1 }}
+              className="rounded-xl p-2.5"
+              style={{ background: s.gold ? 'rgba(212,175,55,0.07)' : 'rgba(255,255,255,0.03)', border: `1px solid ${s.gold ? 'rgba(212,175,55,0.2)' : 'rgba(255,255,255,0.05)'}` }}>
+              <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>{s.label}</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: s.gold ? '#D4AF37' : 'rgba(255,255,255,0.85)' }}>{s.value}</div>
+            </motion.div>
+          ))}
+        </div>
+        {/* chart */}
+        <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+          <div className="flex items-center justify-between mb-2">
+            <span style={{ fontSize: '9px', color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Receita Semanal</span>
+            <span style={{ fontSize: '9px', color: '#4ade80', fontWeight: 600 }}>↑ +24%</span>
+          </div>
+          <MiniChart/>
+        </div>
+        {/* schedule */}
+        <div>
+          <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Próximos Agendamentos</div>
+          <div className="space-y-1.5">
+            {[
+              { time: '14:00', name: 'Pedro A.',   service: 'Corte + Barba',   now: true  },
+              { time: '14:45', name: 'Rodrigo N.', service: 'Corte Clássico',  now: false },
+              { time: '15:30', name: 'Felipe S.',  service: 'Barba Completa',  now: false },
+            ].map((a, i) => (
+              <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.9 + i * 0.08 }}
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2"
+                style={{ background: a.now ? 'rgba(212,175,55,0.06)' : 'rgba(255,255,255,0.02)', border: `1px solid ${a.now ? 'rgba(212,175,55,0.18)' : 'rgba(255,255,255,0.04)'}` }}>
+                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: a.now ? '#D4AF37' : 'rgba(113,113,122,0.5)', minWidth: '30px' }}>{a.time}</span>
+                <div className="flex-1 min-w-0">
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{a.name}</div>
+                  <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.5)' }}>{a.service}</div>
+                </div>
+                {a.now && (
+                  <div className="flex items-center gap-1">
+                    <motion.div animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.4, repeat: Infinity }}
+                      className="w-1.5 h-1.5 rounded-full" style={{ background: '#D4AF37' }}/>
+                    <span style={{ fontSize: '8px', color: '#D4AF37', fontWeight: 600 }}>Agora</span>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 h-10 pointer-events-none"
+        style={{ background: 'linear-gradient(to top, rgba(7,7,7,0.8), transparent)' }}/>
+    </TiltCard>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUTH FORM (used inside modal)
+// ══════════════════════════════════════════════════════════════
+function AuthForm({ users, onAuth, onRegister, initialMode = 'login' }: {
   users: AppUser[]
   onAuth: (user: AppUser) => void
   onRegister: (user: AppUser) => void
+  initialMode?: 'login' | 'register'
 }) {
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode)
   const [role, setRole] = useState<UserRole>('client')
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
@@ -270,50 +471,33 @@ function AuthScreen({ users, onAuth, onRegister }: {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative px-4 py-10"
-      style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <AmbientBackground />
-
-      <div className="relative z-10 w-full max-w-md">
-        {/* Logo */}
+    <div className="rounded-3xl p-6"
+      style={{
+        background: 'rgba(8,8,8,0.97)',
+        backdropFilter: 'blur(32px)',
+        WebkitBackdropFilter: 'blur(32px)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 40px 100px rgba(0,0,0,0.6)',
+      }}>
+      {/* Logo inside modal */}
+      <div className="flex items-center gap-3 mb-6">
         <motion.div
-          initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="text-center mb-10">
-          <div className="inline-flex items-center gap-3 mb-4">
-            <motion.div
-              animate={{ boxShadow: ['0 0 20px rgba(212,175,55,0.3)', '0 0 50px rgba(212,175,55,0.6)', '0 0 20px rgba(212,175,55,0.3)'] }}
-              transition={{ duration: 2.5, repeat: Infinity }}
-              className="w-11 h-11 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)' }}>
-              <Scissors size={18} style={{ color: '#D4AF37' }} />
-            </motion.div>
-            <div className="text-left">
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>
-                LEGACY
-              </div>
-              <div style={{ fontSize: '9px', color: 'rgba(113,113,122,0.5)', letterSpacing: '0.36em', marginTop: '2px' }}>
-                BARBER
-              </div>
-            </div>
-          </div>
-          <p style={{ color: 'rgba(113,113,122,0.6)', fontSize: '13px' }}>
-            {mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
-          </p>
+          animate={{ boxShadow: ['0 0 16px rgba(212,175,55,0.25)', '0 0 36px rgba(212,175,55,0.55)', '0 0 16px rgba(212,175,55,0.25)'] }}
+          transition={{ duration: 2.5, repeat: Infinity }}
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.28)' }}>
+          <Scissors size={15} style={{ color: '#D4AF37' }} />
         </motion.div>
+        <div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>
+          <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.45)', letterSpacing: '0.36em' }}>BARBER</div>
+        </div>
+        <p className="ml-auto" style={{ color: 'rgba(113,113,122,0.55)', fontSize: '12px' }}>
+          {mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
+        </p>
+      </div>
 
-        {/* Main card */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-3xl p-6"
-          style={{
-            background: 'rgba(10,10,10,0.85)',
-            backdropFilter: 'blur(32px)',
-            WebkitBackdropFilter: 'blur(32px)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            boxShadow: '0 40px 100px rgba(0,0,0,0.5)',
-          }}>
+      <div>
 
           {/* Mode tabs */}
           <div className="flex gap-0.5 p-1 rounded-2xl mb-6"
@@ -467,8 +651,605 @@ function AuthScreen({ users, onAuth, onRegister }: {
               })()}
             </motion.div>
           </AnimatePresence>
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUTH MODAL
+// ══════════════════════════════════════════════════════════════
+function AuthModal({ open, onClose, initialMode = 'login', users, onAuth, onRegister }: {
+  open: boolean
+  onClose: () => void
+  initialMode?: 'login' | 'register'
+  users: AppUser[]
+  onAuth: (user: AppUser) => void
+  onRegister: (user: AppUser) => void
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-50"
+            style={{ backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', background: 'rgba(0,0,0,0.72)' }}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, y: 36, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 36, scale: 0.95 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="pointer-events-auto relative w-full max-w-md"
+            >
+              <button onClick={onClose}
+                className="absolute -top-3 -right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+                style={{ background: 'rgba(10,10,10,0.95)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(113,113,122,0.7)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#fff' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(113,113,122,0.7)' }}>
+                <X size={14}/>
+              </button>
+              <AuthForm key={`${String(open)}-${initialMode}`} users={users} onAuth={onAuth} onRegister={onRegister} initialMode={initialMode}/>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANDING — NAVBAR
+// ══════════════════════════════════════════════════════════════
+type OpenAuthFn = (mode?: 'login' | 'register') => void
+
+function LandingNav({ onOpenAuth }: { onOpenAuth: OpenAuthFn }) {
+  const [scrolled, setScrolled] = useState(false)
+  const [mob, setMob] = useState(false)
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', fn)
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
+
+  const scrollTo = (id: string) => { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); setMob(false) }
+
+  return (
+    <motion.nav
+      initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 pt-3 pb-3">
+      <div className="max-w-6xl mx-auto flex items-center justify-between rounded-2xl px-5 py-3"
+        style={{
+          background: scrolled ? 'rgba(5,5,5,0.92)' : 'rgba(5,5,5,0.5)',
+          backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
+          border: `1px solid ${scrolled ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)'}`,
+          boxShadow: scrolled ? '0 8px 40px rgba(0,0,0,0.45)' : 'none',
+          transition: 'all 0.3s ease',
+        }}>
+        {/* Logo */}
+        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)' }}>
+            <Scissors size={13} style={{ color: '#D4AF37' }}/>
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>
+            <div style={{ fontSize: '7px', color: 'rgba(113,113,122,0.45)', letterSpacing: '0.36em' }}>BARBER</div>
+          </div>
+        </button>
+        {/* Nav links */}
+        <div className="hidden md:flex items-center gap-7">
+          {[['Recursos','features'],['Como Funciona','how-it-works'],['Preços','pricing']].map(([label, id]) => (
+            <button key={id} onClick={() => scrollTo(id)}
+              className="text-sm font-medium transition-colors duration-200"
+              style={{ color: 'rgba(113,113,122,0.7)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#D4AF37' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(113,113,122,0.7)' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {/* Auth buttons */}
+        <div className="flex items-center gap-2.5">
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            onClick={() => onOpenAuth('login')}
+            className="hidden md:flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
+            style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.7)' }}
+            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(212,175,55,0.25)'; b.style.color = '#D4AF37' }}
+            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.07)'; b.style.color = 'rgba(161,161,170,0.7)' }}>
+            <LogIn size={13}/> Entrar
+          </motion.button>
+          <motion.button whileHover={{ scale: 1.04, boxShadow: '0 0 40px rgba(212,175,55,0.38)' }} whileTap={{ scale: 0.97 }}
+            onClick={() => onOpenAuth('register')}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-black"
+            style={{ background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)', letterSpacing: '0.01em' }}>
+            <UserPlus size={13}/> Começar Grátis
+          </motion.button>
+          <button className="md:hidden" onClick={() => setMob(o => !o)} style={{ color: 'rgba(113,113,122,0.7)' }}>
+            {mob ? <X size={18}/> : <Menu size={18}/>}
+          </button>
+        </div>
+      </div>
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {mob && (
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className="md:hidden max-w-6xl mx-auto mt-2 rounded-2xl px-5 py-4 space-y-1"
+            style={{ background: 'rgba(8,8,8,0.97)', backdropFilter: 'blur(28px)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {[['Recursos','features'],['Como Funciona','how-it-works'],['Preços','pricing']].map(([label, id]) => (
+              <button key={id} onClick={() => scrollTo(id)}
+                className="w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors"
+                style={{ color: 'rgba(161,161,170,0.7)' }}>
+                {label}
+              </button>
+            ))}
+            <div className="pt-2 flex gap-2">
+              <button onClick={() => { onOpenAuth('login'); setMob(false) }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium text-center"
+                style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.7)' }}>
+                Entrar
+              </button>
+              <button onClick={() => { onOpenAuth('register'); setMob(false) }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black text-center"
+                style={{ background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)' }}>
+                Começar Grátis
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.nav>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANDING — HERO
+// ══════════════════════════════════════════════════════════════
+function HeroSection({ onOpenAuth }: { onOpenAuth: OpenAuthFn }) {
+  return (
+    <section className="relative min-h-screen flex items-center pt-28 pb-20 px-4 md:px-8 overflow-hidden">
+      <AmbientBackground/>
+      <TechGrid/>
+      <FloatingParticles/>
+      <div className="max-w-6xl mx-auto w-full relative z-10">
+        <div className="grid md:grid-cols-2 gap-14 items-center">
+          {/* Left */}
+          <div>
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-7"
+              style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)' }}>
+              <motion.div animate={{ scale: [1,1.4,1] }} transition={{ duration: 2, repeat: Infinity }}
+                className="w-1.5 h-1.5 rounded-full" style={{ background: '#D4AF37' }}/>
+              <span style={{ fontSize: '11px', color: '#D4AF37', fontWeight: 600, letterSpacing: '0.06em' }}>SISTEMA 2025 · NOVO</span>
+            </motion.div>
+
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+              {[
+                { text: 'Gestão de',   color: 'white'   },
+                { text: 'Barbearia',   color: 'gold'    },
+                { text: 'de Elite.',   color: 'white'   },
+              ].map((line, i) => (
+                <motion.span key={i} style={{ display: 'block', fontSize: 'clamp(42px,5.5vw,76px)', fontWeight: 700, lineHeight: 1.05,
+                  ...(line.color === 'gold' ? {
+                    background: 'linear-gradient(135deg,#9A7D21 0%,#D4AF37 45%,#F0D060 100%)',
+                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                  } : { color: 'white' })
+                }}
+                  initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + i * 0.12, duration: 0.75, ease: [0.16,1,0.3,1] }}>
+                  {line.text}
+                </motion.span>
+              ))}
+            </h1>
+
+            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.52 }}
+              className="mt-6 text-base leading-relaxed" style={{ color: 'rgba(113,113,122,0.72)', maxWidth: '470px' }}>
+              Agendamento inteligente, controle total de equipe e estoque, relatórios em tempo real. Tudo em um sistema feito para barbearias que buscam excelência.
+            </motion.p>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.62 }}
+              className="flex flex-wrap gap-3 mt-8">
+              <motion.button whileHover={{ scale: 1.04, boxShadow: '0 0 60px rgba(212,175,55,0.42)' }} whileTap={{ scale: 0.97 }}
+                onClick={() => onOpenAuth('register')}
+                className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-black text-sm"
+                style={{ background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)', letterSpacing: '0.02em' }}>
+                Começar Gratuitamente <ArrowRight size={15}/>
+              </motion.button>
+              <motion.button whileTap={{ scale: 0.97 }}
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-medium text-sm transition-all duration-200"
+                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(161,161,170,0.75)' }}
+                onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(212,175,55,0.35)'; b.style.color = '#D4AF37' }}
+                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(161,161,170,0.75)' }}>
+                Ver Recursos
+              </motion.button>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, delay: 0.9 }}
+              className="flex items-center gap-8 mt-10">
+              <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.38)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Confiado por</span>
+              {[['1.200+','Barbearias'],['50k+','Agendamentos'],['98%','Satisfação']].map(([v,l],i)=>(
+                <div key={i}>
+                  <div style={{ fontWeight: 700, color: '#D4AF37', fontSize: '18px', lineHeight: 1 }}>{v}</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '2px' }}>{l}</div>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Right — mockup */}
+          <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 1, delay: 0.3, ease: [0.16,1,0.3,1] }}
+            className="hidden md:block">
+            <motion.div animate={{ y: [0,-10,0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}>
+              <DashboardMockup/>
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANDING — FEATURES
+// ══════════════════════════════════════════════════════════════
+function FeaturesSection() {
+  return (
+    <section id="features" className="relative py-24 px-4 md:px-8">
+      <div className="max-w-6xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
+            style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.18)' }}>
+            <Shield size={11} style={{ color: '#D4AF37' }}/>
+            <span style={{ fontSize: '11px', color: '#D4AF37', fontWeight: 600, letterSpacing: '0.06em' }}>RECURSOS</span>
+          </div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,4vw,52px)', fontWeight: 700, color: 'white', marginBottom: '14px' }}>
+            Tudo que sua barbearia precisa
+          </h2>
+          <p style={{ color: 'rgba(113,113,122,0.6)', fontSize: '15px', maxWidth: '480px', margin: '0 auto' }}>
+            Do agendamento ao financeiro, uma plataforma completa para barbearias profissionais.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {LANDING_FEATURES.map((f, i) => {
+            const Icon = f.icon
+            return (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.6, delay: i * 0.08 }}
+                whileHover={{ y: -5, scale: 1.02 }}
+                className="relative rounded-2xl p-6 cursor-default group"
+                style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(255,255,255,0.06)', transition: 'border-color 0.25s, box-shadow 0.25s' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'rgba(212,175,55,0.3)'; el.style.boxShadow = '0 0 40px rgba(212,175,55,0.08)' }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'rgba(255,255,255,0.06)'; el.style.boxShadow = 'none' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
+                  style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.16)', transition: 'background 0.25s, box-shadow 0.25s' }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.background = 'rgba(212,175,55,0.16)'; el.style.boxShadow = '0 0 20px rgba(212,175,55,0.2)' }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.background = 'rgba(212,175,55,0.08)'; el.style.boxShadow = 'none' }}>
+                  <Icon size={18} style={{ color: '#D4AF37' }}/>
+                </div>
+                <h3 style={{ fontWeight: 700, color: 'rgba(255,255,255,0.9)', fontSize: '15px', marginBottom: '8px' }}>{f.title}</h3>
+                <p style={{ color: 'rgba(113,113,122,0.65)', fontSize: '13px', lineHeight: 1.65 }}>{f.desc}</p>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANDING — STATS
+// ══════════════════════════════════════════════════════════════
+function StatsSection() {
+  const stats = [
+    { value: 1200, suffix: '+', label: 'Barbearias Ativas',    prefix: '' },
+    { value: 50,   suffix: 'k+', label: 'Agendamentos/mês',   prefix: '' },
+    { value: 2,    suffix: 'M+', label: 'Gerenciados',        prefix: 'R$ ' },
+    { value: 98,   suffix: '%',  label: 'Clientes Satisfeitos', prefix: '' },
+  ]
+  return (
+    <section className="relative py-16 px-4 md:px-8 overflow-hidden"
+      style={{ background: 'rgba(212,175,55,0.025)', borderTop: '1px solid rgba(212,175,55,0.08)', borderBottom: '1px solid rgba(212,175,55,0.08)' }}>
+      <TechGrid/>
+      <div className="max-w-6xl mx-auto relative z-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {stats.map((s, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }} transition={{ duration: 0.6, delay: i * 0.1 }}
+              className="text-center">
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(36px,4vw,56px)', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>
+                {s.prefix}<AnimatedNumber value={s.value}/>{s.suffix}
+              </div>
+              <div style={{ fontSize: '12px', color: 'rgba(113,113,122,0.6)', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+                {s.label}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANDING — HOW IT WORKS
+// ══════════════════════════════════════════════════════════════
+function HowItWorksSection() {
+  const steps = [
+    { n: '01', icon: Building2,  title: 'Cadastre sua barbearia',   desc: 'Crie sua conta e configure o perfil da barbearia em menos de 5 minutos.' },
+    { n: '02', icon: Users,      title: 'Convide sua equipe',        desc: 'Adicione barbeiros com perfis individuais. Cada um acessa sua própria agenda.' },
+    { n: '03', icon: CheckCircle,title: 'Comece a receber',          desc: 'Seus clientes já podem agendar online. Você gerencia tudo em um painel.' },
+  ]
+  return (
+    <section id="how-it-works" className="py-24 px-4 md:px-8">
+      <div className="max-w-6xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
+            style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.18)' }}>
+            <Zap size={11} style={{ color: '#D4AF37' }}/>
+            <span style={{ fontSize: '11px', color: '#D4AF37', fontWeight: 600, letterSpacing: '0.06em' }}>COMO FUNCIONA</span>
+          </div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,4vw,52px)', fontWeight: 700, color: 'white' }}>
+            Pronto em 3 passos simples
+          </h2>
+        </motion.div>
+        <div className="grid md:grid-cols-3 gap-6 relative">
+          <div className="hidden md:block absolute top-10 left-1/3 right-1/3 h-px"
+            style={{ background: 'linear-gradient(to right, rgba(212,175,55,0.15), rgba(212,175,55,0.35), rgba(212,175,55,0.15))' }}/>
+          {steps.map((s, i) => {
+            const Icon = s.icon
+            return (
+              <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.65, delay: i * 0.14 }}
+                whileHover={{ y: -4 }}
+                className="relative text-center rounded-2xl p-8"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5 relative"
+                  style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)' }}>
+                  <Icon size={22} style={{ color: '#D4AF37' }}/>
+                  <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{ background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.3)', fontSize: '9px', fontWeight: 700, color: '#D4AF37', fontFamily: 'monospace' }}>
+                    {s.n}
+                  </div>
+                </div>
+                <h3 style={{ fontWeight: 700, color: 'rgba(255,255,255,0.9)', fontSize: '16px', marginBottom: '10px' }}>{s.title}</h3>
+                <p style={{ color: 'rgba(113,113,122,0.65)', fontSize: '13px', lineHeight: 1.7 }}>{s.desc}</p>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANDING — TESTIMONIALS
+// ══════════════════════════════════════════════════════════════
+function TestimonialsSection() {
+  return (
+    <section className="py-20 px-4 md:px-8">
+      <div className="max-w-6xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-14">
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,3.5vw,46px)', fontWeight: 700, color: 'white', marginBottom: '8px' }}>
+            O que dizem nossos clientes
+          </h2>
+        </motion.div>
+        <div className="grid md:grid-cols-3 gap-5">
+          {TESTIMONIALS_DATA.map((t, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }} transition={{ duration: 0.65, delay: i * 0.1 }}
+              whileHover={{ y: -5, scale: 1.01 }}
+              className="rounded-2xl p-6"
+              style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(255,255,255,0.06)', transition: 'border-color 0.25s, box-shadow 0.25s' }}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'rgba(212,175,55,0.25)'; el.style.boxShadow = '0 0 40px rgba(212,175,55,0.06)' }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'rgba(255,255,255,0.06)'; el.style.boxShadow = 'none' }}>
+              <div className="flex mb-3">
+                {Array.from({ length: 5 }).map((_, j) => (
+                  <Star key={j} size={13} fill="#D4AF37" style={{ color: '#D4AF37' }}/>
+                ))}
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '14px', lineHeight: 1.7, marginBottom: '20px' }}>"{t.text}"</p>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+                  style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.2)' }}>
+                  {t.avatar}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.88)', fontSize: '13px' }}>{t.name}</div>
+                  <div style={{ color: 'rgba(113,113,122,0.5)', fontSize: '11px', marginTop: '1px' }}>{t.shop}</div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANDING — PRICING
+// ══════════════════════════════════════════════════════════════
+function PricingSection({ onOpenAuth }: { onOpenAuth: OpenAuthFn }) {
+  return (
+    <section id="pricing" className="py-24 px-4 md:px-8">
+      <div className="max-w-5xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
+            style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.18)' }}>
+            <Star size={11} style={{ color: '#D4AF37' }}/>
+            <span style={{ fontSize: '11px', color: '#D4AF37', fontWeight: 600, letterSpacing: '0.06em' }}>PREÇOS</span>
+          </div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,4vw,52px)', fontWeight: 700, color: 'white', marginBottom: '12px' }}>
+            Simples e transparente
+          </h2>
+          <p style={{ color: 'rgba(113,113,122,0.6)', fontSize: '15px' }}>Sem taxas ocultas. Cancele quando quiser.</p>
+        </motion.div>
+        <div className="grid md:grid-cols-3 gap-5 items-center">
+          {PRICING_DATA.map((plan, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }} transition={{ duration: 0.65, delay: i * 0.1 }}
+              whileHover={{ y: plan.recommended ? -6 : -4, scale: plan.recommended ? 1.02 : 1.01 }}
+              className={`relative rounded-2xl p-7 ${plan.recommended ? 'md:-my-4' : ''}`}
+              style={{
+                background: plan.recommended ? 'rgba(212,175,55,0.06)' : 'rgba(255,255,255,0.022)',
+                border: `1px solid ${plan.recommended ? 'rgba(212,175,55,0.35)' : 'rgba(255,255,255,0.06)'}`,
+                boxShadow: plan.recommended ? '0 0 60px rgba(212,175,55,0.12)' : 'none',
+                transition: 'border-color 0.25s, box-shadow 0.25s',
+              }}
+              onMouseEnter={e => { if (!plan.recommended) { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'rgba(212,175,55,0.2)'; el.style.boxShadow = '0 0 30px rgba(212,175,55,0.06)' }}}
+              onMouseLeave={e => { if (!plan.recommended) { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = 'rgba(255,255,255,0.06)'; el.style.boxShadow = 'none' }}}>
+              {plan.recommended && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-bold text-black"
+                  style={{ background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+                  MAIS POPULAR
+                </div>
+              )}
+              <div style={{ fontSize: '12px', fontWeight: 700, color: plan.recommended ? '#D4AF37' : 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>
+                {plan.name}
+              </div>
+              <div className="flex items-baseline gap-1 mb-6">
+                <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '42px', fontWeight: 700, color: plan.recommended ? '#D4AF37' : 'white', lineHeight: 1 }}>{plan.price}</span>
+                {plan.period && <span style={{ fontSize: '14px', color: 'rgba(113,113,122,0.6)' }}>{plan.period}</span>}
+              </div>
+              <div className="space-y-3 mb-7">
+                {plan.features.map((feat, j) => (
+                  <div key={j} className="flex items-center gap-2.5">
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: plan.recommended ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.06)' }}>
+                      <Check size={9} style={{ color: plan.recommended ? '#D4AF37' : 'rgba(161,161,170,0.7)' }}/>
+                    </div>
+                    <span style={{ fontSize: '13px', color: plan.recommended ? 'rgba(255,255,255,0.8)' : 'rgba(161,161,170,0.65)' }}>{feat}</span>
+                  </div>
+                ))}
+              </div>
+              <motion.button whileHover={{ scale: 1.03, boxShadow: plan.recommended ? '0 0 40px rgba(212,175,55,0.4)' : undefined }} whileTap={{ scale: 0.97 }}
+                onClick={() => onOpenAuth('register')}
+                className="w-full py-3 rounded-xl font-semibold text-sm"
+                style={plan.recommended
+                  ? { background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)', color: '#000', letterSpacing: '0.02em' }
+                  : { border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(161,161,170,0.75)', background: 'transparent', transition: 'border-color 0.2s, color 0.2s' }}
+                onMouseEnter={e => { if (!plan.recommended) { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(212,175,55,0.3)'; b.style.color = '#D4AF37' }}}
+                onMouseLeave={e => { if (!plan.recommended) { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.09)'; b.style.color = 'rgba(161,161,170,0.75)' }}}>
+                {plan.cta}
+              </motion.button>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANDING — CTA + FOOTER
+// ══════════════════════════════════════════════════════════════
+function CTASection({ onOpenAuth }: { onOpenAuth: OpenAuthFn }) {
+  return (
+    <section className="relative py-28 px-4 md:px-8 overflow-hidden">
+      <TechGrid/>
+      <AmbientBackground/>
+      <div className="max-w-3xl mx-auto text-center relative z-10">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
+          <motion.div
+            animate={{ boxShadow: ['0 0 40px rgba(212,175,55,0.1)','0 0 80px rgba(212,175,55,0.22)','0 0 40px rgba(212,175,55,0.1)'] }}
+            transition={{ duration: 3, repeat: Infinity }}
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-8"
+            style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.25)' }}>
+            <Scissors size={26} style={{ color: '#D4AF37' }}/>
+          </motion.div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(34px,4.5vw,64px)', fontWeight: 700, color: 'white', lineHeight: 1.1, marginBottom: '16px' }}>
+            Pronto para transformar<br/>sua barbearia?
+          </h2>
+          <p style={{ color: 'rgba(113,113,122,0.65)', fontSize: '15px', marginBottom: '36px' }}>
+            Sem cartão de crédito · Setup em 5 minutos · Suporte em português
+          </p>
+          <motion.button whileHover={{ scale: 1.05, boxShadow: '0 0 80px rgba(212,175,55,0.5)' }} whileTap={{ scale: 0.97 }}
+            onClick={() => onOpenAuth('register')}
+            className="inline-flex items-center gap-2 px-10 py-4 rounded-xl font-bold text-black text-base"
+            style={{ background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)', letterSpacing: '0.02em' }}>
+            Começar Gratuitamente <ArrowRight size={17}/>
+          </motion.button>
         </motion.div>
       </div>
+    </section>
+  )
+}
+
+function LandingFooter() {
+  return (
+    <footer className="border-t px-4 md:px-8 py-12" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+      <div className="max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-4 gap-8 mb-10">
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.22)' }}>
+                <Scissors size={13} style={{ color: '#D4AF37' }}/>
+              </div>
+              <div>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>
+                <div style={{ fontSize: '7px', color: 'rgba(113,113,122,0.4)', letterSpacing: '0.36em' }}>BARBER</div>
+              </div>
+            </div>
+            <p style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px', lineHeight: 1.7, maxWidth: '280px' }}>
+              O sistema de gestão para barbearias de elite. Tecnologia que eleva o padrão do seu negócio.
+            </p>
+          </div>
+          {[
+            { title: 'Produto',  links: ['Recursos','Preços','Changelog','Status'] },
+            { title: 'Empresa',  links: ['Sobre','Blog','Contato','Parceiros'] },
+          ].map((col, i) => (
+            <div key={i}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '14px' }}>
+                {col.title}
+              </div>
+              <div className="space-y-2.5">
+                {col.links.map(link => (
+                  <div key={link} style={{ fontSize: '13px', color: 'rgba(113,113,122,0.5)', cursor: 'pointer', transition: 'color 0.2s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.color = '#D4AF37' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.color = 'rgba(113,113,122,0.5)' }}>
+                    {link}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="pt-6 flex items-center justify-between" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+          <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.35)' }}>© 2025 Legacy Barber. Todos os direitos reservados.</span>
+          <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.35)' }}>Feito com precisão artesanal.</span>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANDING PAGE (assembler)
+// ══════════════════════════════════════════════════════════════
+function LandingPage({ onOpenAuth }: { onOpenAuth: OpenAuthFn }) {
+  useEffect(() => { window.scrollTo(0, 0) }, [])
+  return (
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#050505', minHeight: '100vh' }}>
+      <LandingNav onOpenAuth={onOpenAuth}/>
+      <HeroSection onOpenAuth={onOpenAuth}/>
+      <FeaturesSection/>
+      <StatsSection/>
+      <HowItWorksSection/>
+      <TestimonialsSection/>
+      <PricingSection onOpenAuth={onOpenAuth}/>
+      <CTASection onOpenAuth={onOpenAuth}/>
+      <LandingFooter/>
     </div>
   )
 }
@@ -1303,9 +2084,15 @@ export default function App() {
   const [currentUser, setUser]    = useState<AppUser | null>(null)
   const [tab, setTab]             = useState('agenda')
   const [mobileOpen, setMobile]   = useState(false)
+  const [showAuth, setShowAuth]   = useState(false)
+  const [authMode, setAuthMode]   = useState<'login' | 'register'>('login')
+
+  const openAuth: OpenAuthFn = (mode = 'login') => { setAuthMode(mode); setShowAuth(true) }
+  const closeAuth = () => setShowAuth(false)
 
   const login = (u: AppUser) => {
     setUser(u)
+    setShowAuth(false)
     setTab(u.role === 'admin' ? 'dashboard' : 'agenda')
   }
   const logout = () => { setUser(null); setMobile(false) }
@@ -1313,9 +2100,10 @@ export default function App() {
 
   // ── Not authenticated ──────────────────────────────────────
   if (!currentUser) return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#050505', minHeight: '100vh' }}>
-      <AuthScreen users={users} onAuth={login} onRegister={addUser} />
-    </div>
+    <>
+      <LandingPage onOpenAuth={openAuth}/>
+      <AuthModal open={showAuth} onClose={closeAuth} initialMode={authMode} users={users} onAuth={login} onRegister={addUser}/>
+    </>
   )
 
   // ── Authenticated ──────────────────────────────────────────
