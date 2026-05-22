@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #050505;
+  color: white;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 4px; height: 4px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: rgba(212,175,55,0.2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.4); }
+
+/* ── Selection ─────────────────────────────────────────── */
+::selection { background: rgba(212,175,55,0.22); color: #fff; }
+
+/* ── Date input ────────────────────────────────────────── */
+input[type="date"] { color-scheme: dark; }
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6) sepia(0.5) saturate(3) hue-rotate(5deg);
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+button, input, textarea, select { font: inherit; }
+
+/* ── Utilities ─────────────────────────────────────────── */
+@layer utilities {
+  .glass {
+    background: rgba(255,255,255,0.025);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .glass-gold {
+    background: rgba(212,175,55,0.05);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(212,175,55,0.18);
+  }
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #9A7D21 0%, #D4AF37 45%, #F0D060 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .glow-gold {
+    box-shadow: 0 0 40px rgba(212,175,55,0.15), 0 0 80px rgba(212,175,55,0.05);
+  }
+}
+
+/* ── Shimmer keyframe ───────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
