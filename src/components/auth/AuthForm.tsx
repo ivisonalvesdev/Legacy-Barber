@@ -89,14 +89,14 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
             ? 'Este e-mail já está cadastrado.'
             : signUpErr.message
         )
-        if (!data.user) throw new Error('Erro ao criar conta. Tente novamente.')
-
-        // Email confirmation required (Supabase setting enabled)
+        // Email confirmation habilitado — usuário criado mas aguarda confirmação
         if (!data.session) {
           setError('✉️ Conta criada! Verifique seu e-mail para confirmar o cadastro.')
           setLoading(false)
           return
         }
+
+        if (!data.user) throw new Error('Erro ao criar conta. Tente novamente.')
 
         const initials = form.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
 
