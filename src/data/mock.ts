@@ -2,10 +2,10 @@ import type { AppUser } from '../types'
 import { Calendar, Users, Package, BarChart2, MessageCircle, Zap } from 'lucide-react'
 
 export const MOCK_USERS: AppUser[] = [
-  { id: '1', name: 'Carlos Motta',  email: 'carlos@legacy.com', phone: '11999990001', role: 'barber', password: '123456', specialty: 'Degradê & Textura',  avatar: 'CM' },
-  { id: '2', name: 'Diego Alves',   email: 'diego@legacy.com',  phone: '11999990002', role: 'barber', password: '123456', specialty: 'Barba Artística',    avatar: 'DA' },
-  { id: '3', name: 'João Silva',    email: 'admin@legacy.com',  phone: '11999990003', role: 'admin',  password: '123456', barbershopName: 'Legacy Barber', avatar: 'JS' },
-  { id: '4', name: 'Pedro Cliente', email: 'pedro@email.com',   phone: '11999990004', role: 'client', password: '123456', avatar: 'PC' },
+  { id: '1', name: 'Carlos Motta',  email: 'carlos@legacy.com', phone: '11999990001', role: 'barber', specialty: 'Degradê & Textura',  avatar: 'CM' },
+  { id: '2', name: 'Diego Alves',   email: 'diego@legacy.com',  phone: '11999990002', role: 'barber', specialty: 'Barba Artística',    avatar: 'DA' },
+  { id: '3', name: 'João Silva',    email: 'admin@legacy.com',  phone: '11999990003', role: 'admin',  barbershopName: 'Legacy Barber', avatar: 'JS' },
+  { id: '4', name: 'Pedro Cliente', email: 'pedro@email.com',   phone: '11999990004', role: 'client', avatar: 'PC' },
 ]
 
 export const SERVICES = [

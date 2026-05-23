@@ -7,12 +7,10 @@ interface AuthModalProps {
   open: boolean
   onClose: () => void
   initialMode?: 'login' | 'register'
-  users: AppUser[]
   onAuth: (user: AppUser) => void
-  onRegister: (user: AppUser) => void
 }
 
-export function AuthModal({ open, onClose, initialMode = 'login', users, onAuth, onRegister }: AuthModalProps) {
+export function AuthModal({ open, onClose, initialMode = 'login', onAuth }: AuthModalProps) {
   return (
     <AnimatePresence>
       {open && (
@@ -39,7 +37,7 @@ export function AuthModal({ open, onClose, initialMode = 'login', users, onAuth,
               </button>
               <AuthForm
                 key={`${String(open)}-${initialMode}`}
-                users={users} onAuth={onAuth} onRegister={onRegister} initialMode={initialMode}
+                onAuth={onAuth} initialMode={initialMode}
               />
             </motion.div>
           </div>

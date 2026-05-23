@@ -6,7 +6,6 @@ export interface AppUser {
   email: string
   phone: string
   role: UserRole
-  password: string
   specialty?: string
   barbershopName?: string
   avatar: string

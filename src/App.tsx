@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Scissors, Menu, X } from 'lucide-react'
 
-import type { AppUser, OpenAuthFn } from './types'
-import { MOCK_USERS }          from './data/mock'
+import type { AppUser, OpenAuthFn, UserRole } from './types'
+import { supabase } from './lib/supabase'
 
 import { AmbientBackground }      from './components/ui/AmbientBackground'
 import { LandingPage }            from './components/landing/LandingPage'
@@ -18,12 +18,48 @@ import { AdminRelatoriosView }    from './components/dashboard/AdminRelatoriosVi
 import { NAV_MAP }                from './components/dashboard/Sidebar'
 
 export default function App() {
-  const [users, setUsers]       = useState<AppUser[]>(MOCK_USERS)
   const [currentUser, setUser]  = useState<AppUser | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
   const [tab, setTab]           = useState('agenda')
   const [mobileOpen, setMobile] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+
+  // ── Restaura sessão ao recarregar a página ─────────────────
+  useEffect(() => {
+    const fetchProfile = async (userId: string, email: string) => {
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      if (data) {
+        setUser({
+          id:             data.id,
+          name:           data.name,
+          email,
+          phone:          data.phone          ?? '',
+          role:           data.role           as UserRole,
+          specialty:      data.specialty      ?? undefined,
+          barbershopName: data.barbershop_name ?? undefined,
+          avatar:         data.avatar          ?? '',
+        })
+        setTab(data.role === 'admin' ? 'dashboard' : 'agenda')
+      }
+      setAuthLoading(false)
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          await fetchProfile(session.user.id, session.user.email!)
+        } else {
+          setAuthLoading(false)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setAuthLoading(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const openAuth: OpenAuthFn = (mode = 'login') => { setAuthMode(mode); setShowAuth(true) }
   const closeAuth = () => setShowAuth(false)
@@ -33,22 +69,34 @@ export default function App() {
     setShowAuth(false)
     setTab(u.role === 'admin' ? 'dashboard' : 'agenda')
   }
-  const logout  = () => { setUser(null); setMobile(false) }
-  const addUser = (u: AppUser) => setUsers(p => [...p, u])
 
-  // ── Unauthenticated ─────────────────────────────────────────
+  const logout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    setMobile(false)
+  }
+
+  // ── Carregando sessão (evita flash da landing) ─────────────
+  if (authLoading) return (
+    <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
+        <Scissors size={22} style={{ color: '#D4AF37' }} />
+      </motion.div>
+    </div>
+  )
+
+  // ── Não autenticado ────────────────────────────────────────
   if (!currentUser) return (
     <>
       <LandingPage onOpenAuth={openAuth} />
       <AuthModal
         open={showAuth} onClose={closeAuth}
-        initialMode={authMode} users={users}
-        onAuth={login} onRegister={addUser}
+        initialMode={authMode} onAuth={login}
       />
     </>
   )
 
-  // ── Admin view router ────────────────────────────────────────
+  // ── Admin view router ──────────────────────────────────────
   function AdminView() {
     if (tab === 'estoque')    return <AdminEstoqueView />
     if (tab === 'equipe')     return <AdminEquipeView />
@@ -56,7 +104,7 @@ export default function App() {
     return <AdminDashboardView user={currentUser!} />
   }
 
-  // ── Authenticated ────────────────────────────────────────────
+  // ── Autenticado ────────────────────────────────────────────
   const navItems = NAV_MAP[currentUser.role]
 
   return (
@@ -91,7 +139,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Mobile dropdown — mostra todos os itens do role atual */}
+      {/* Mobile dropdown */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
