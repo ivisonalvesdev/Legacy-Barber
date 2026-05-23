@@ -1,11 +1,68 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Clock, Star, Check, ChevronLeft, ChevronRight, CheckCircle, BadgeCheck, Scissors } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { SERVICES, BARBERS, TIME_SLOTS } from '../../data/mock'
 
 interface ClientViewProps {
   user: AppUser
+}
+
+// ── Confetti ─────────────────────────────────────────────────
+const CONFETTI_COLORS = [
+  '#D4AF37', '#ECCb52', '#F5D76E', '#FFF4D0',  // dourados
+  '#B8951F', '#A07818',                          // dourado escuro
+  '#FFFFFF', 'rgba(255,255,255,0.7)',             // brancos
+  '#F59E0B', '#FBBF24',                          // ambar
+]
+
+const PIECES = Array.from({ length: 72 }, (_, i) => ({
+  id:       i,
+  left:     `${1 + (i * 13.7 + 3) % 97}%`,
+  delay:    (i * 0.047) % 1.6,
+  duration: 2.1 + (i % 7) * 0.28,
+  color:    CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  w:        5 + (i % 5) * 2.2,
+  h:        4 + (i % 4) * 1.8,
+  drift:    ((i % 11) - 5) * 22,
+  rotate:   (i % 2 === 0 ? 1 : -1) * (180 + (i % 6) * 90),
+  round:    i % 4 === 0,
+}))
+
+function ConfettiRain() {
+  const reduced = useReducedMotion()
+  if (reduced) return null
+  return (
+    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, overflow: 'hidden' }}>
+      {PIECES.map(p => (
+        <motion.div
+          key={p.id}
+          initial={{ y: -20, x: 0, rotate: 0, opacity: 1 }}
+          animate={{
+            y:       900,
+            x:       p.drift,
+            rotate:  p.rotate,
+            opacity: [1, 1, 0.8, 0],
+          }}
+          transition={{
+            duration: p.duration,
+            delay:    p.delay,
+            ease:     [0.15, 0.55, 0.7, 1],
+            opacity:  { times: [0, 0.55, 0.8, 1] },
+          }}
+          style={{
+            position:     'absolute',
+            left:          p.left,
+            top:           0,
+            width:         p.w,
+            height:        p.round ? p.w : p.h,
+            background:    p.color,
+            borderRadius:  p.round ? '50%' : '2px',
+          }}
+        />
+      ))}
+    </div>
+  )
 }
 
 export function ClientView({ user }: ClientViewProps) {
@@ -33,40 +90,54 @@ export function ClientView({ user }: ClientViewProps) {
   ]
 
   if (confirmed) return (
-    <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center text-center max-w-md mx-auto py-16">
-      <motion.div
-        animate={{ scale: [1, 1.06, 1] }} transition={{ duration: 2.5, repeat: Infinity }}
-        className="w-24 h-24 rounded-full flex items-center justify-center mb-8"
-        style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.28)', boxShadow: '0 0 70px rgba(212,175,55,0.22)' }}>
-        <CheckCircle size={48} style={{ color: '#D4AF37' }} />
-      </motion.div>
-      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '30px', fontWeight: 700, color: 'white', marginBottom: '8px' }}>
-        Agendamento Confirmado!
-      </h2>
-      <p style={{ color: 'rgba(113,113,122,0.8)', fontSize: '14px', lineHeight: 1.6, marginBottom: '32px' }}>
-        Obrigado, <strong style={{ color: 'rgba(255,255,255,0.8)' }}>{user.name.split(' ')[0]}</strong>!<br />
-        {selBarber?.name.split(' ')[0]} te espera no horário marcado.
-      </p>
-      <div className="w-full rounded-2xl p-5 mb-6"
-        style={{ background: 'rgba(212,175,55,0.04)', border: '1px solid rgba(212,175,55,0.16)' }}>
-        {[['Serviço', selService?.name], ['Barbeiro', selBarber?.name], ['Data', selDate], ['Horário', selTime]].map(([k, v]) => (
-          <div key={k} className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <span style={{ color: 'rgba(113,113,122,0.6)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k}</span>
-            <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '13px', fontWeight: 500 }}>{v}</span>
+    /* container relativo + overflow hidden para clipar os confetes */
+    <div className="relative" style={{ minHeight: '80vh', overflow: 'hidden' }}>
+      {/* confetes caem atrás de todo o conteúdo */}
+      <ConfettiRain />
+
+      {/* conteúdo acima dos confetes */}
+      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+        className="relative flex flex-col items-center text-center max-w-md mx-auto py-16"
+        style={{ zIndex: 10 }}>
+
+        {/* ícone pulsante */}
+        <motion.div
+          animate={{ scale: [1, 1.06, 1], boxShadow: ['0 0 40px rgba(212,175,55,0.18)', '0 0 80px rgba(212,175,55,0.36)', '0 0 40px rgba(212,175,55,0.18)'] }}
+          transition={{ duration: 2.5, repeat: Infinity }}
+          className="w-24 h-24 rounded-full flex items-center justify-center mb-8"
+          style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.28)' }}>
+          <CheckCircle size={48} style={{ color: '#D4AF37' }} />
+        </motion.div>
+
+        <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '30px', fontWeight: 700, color: 'white', marginBottom: '8px' }}>
+          Agendamento Confirmado!
+        </h2>
+        <p style={{ color: 'rgba(113,113,122,0.8)', fontSize: '14px', lineHeight: 1.6, marginBottom: '32px' }}>
+          Obrigado, <strong style={{ color: 'rgba(255,255,255,0.8)' }}>{user.name.split(' ')[0]}</strong>!<br />
+          {selBarber?.name.split(' ')[0]} te espera no horário marcado.
+        </p>
+
+        <div className="w-full rounded-2xl p-5 mb-6"
+          style={{ background: 'rgba(212,175,55,0.04)', border: '1px solid rgba(212,175,55,0.16)' }}>
+          {[['Serviço', selService?.name], ['Barbeiro', selBarber?.name], ['Data', selDate], ['Horário', selTime]].map(([k, v]) => (
+            <div key={k} className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <span style={{ color: 'rgba(113,113,122,0.6)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k}</span>
+              <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '13px', fontWeight: 500 }}>{v}</span>
+            </div>
+          ))}
+          <div className="flex justify-between items-center pt-3">
+            <span style={{ color: 'rgba(113,113,122,0.6)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total</span>
+            <span style={{ color: '#D4AF37', fontWeight: 700, fontSize: '20px' }}>R$ {selService?.price}</span>
           </div>
-        ))}
-        <div className="flex justify-between items-center pt-3">
-          <span style={{ color: 'rgba(113,113,122,0.6)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total</span>
-          <span style={{ color: '#D4AF37', fontWeight: 700, fontSize: '20px' }}>R$ {selService?.price}</span>
         </div>
-      </div>
-      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={reset}
-        className="w-full py-3 rounded-xl font-semibold text-black text-sm"
-        style={{ background: 'linear-gradient(135deg, #C4A227, #D4AF37, #E8C547)' }}>
-        Fazer Novo Agendamento
-      </motion.button>
-    </motion.div>
+
+        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={reset}
+          className="w-full py-3 rounded-xl font-semibold text-black text-sm"
+          style={{ background: 'linear-gradient(135deg, #C4A227, #D4AF37, #E8C547)' }}>
+          Fazer Novo Agendamento
+        </motion.button>
+      </motion.div>
+    </div>
   )
 
   return (
