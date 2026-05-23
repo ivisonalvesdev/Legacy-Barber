@@ -17,8 +17,8 @@ export function HeroSection({ onOpenAuth }: HeroSectionProps) {
       <TechGrid />
       <FloatingParticles />
 
-      <div className="max-w-6xl mx-auto w-full relative z-10">
-        <div className="grid md:grid-cols-2 gap-14 items-center">
+      <div className="max-w-7xl mx-auto w-full relative z-10">
+        <div className="grid md:grid-cols-[1fr,1.35fr] gap-10 items-center">
           {/* Left */}
           <div>
             <motion.div
@@ -28,7 +28,7 @@ export function HeroSection({ onOpenAuth }: HeroSectionProps) {
               style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)' }}>
               <motion.div animate={{ scale: [1, 1.4, 1] }} transition={{ duration: 2, repeat: Infinity }}
                 className="w-1.5 h-1.5 rounded-full" style={{ background: '#D4AF37' }} />
-              <span style={{ fontSize: '11px', color: '#D4AF37', fontWeight: 600, letterSpacing: '0.06em' }}>SISTEMA 2025 · NOVO</span>
+              <span style={{ fontSize: '11px', color: '#D4AF37', fontWeight: 600, letterSpacing: '0.06em' }}>SISTEMA 2026 · NOVO</span>
             </motion.div>
 
             <h1 style={{ fontFamily: "'Cormorant Garamond', serif" }}>
