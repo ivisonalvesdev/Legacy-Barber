@@ -24,9 +24,14 @@ export function AdminEstoqueView() {
   const [cat, setCat]         = useState('Todos')
   const [showAdd, setShowAdd] = useState(false)
   const [newItem, setNewItem] = useState({ name: '', category: 'Finalizador', stock: '', max: '', cost: '' })
+  const [qtys, setQtys]       = useState<Record<number, string>>({})
 
-  const adjust = (id: number, delta: number) =>
-    setInv(p => p.map(i => i.id === id ? { ...i, stock: Math.max(0, Math.min(i.max, i.stock + delta)) } : i))
+  const getQty = (id: number) => Math.max(1, parseInt(qtys[id] ?? '1', 10) || 1)
+
+  const adjust = (id: number, delta: number) => {
+    const qty = getQty(id)
+    setInv(p => p.map(i => i.id === id ? { ...i, stock: Math.max(0, Math.min(i.max, i.stock + delta * qty)) } : i))
+  }
 
   const addItem = () => {
     if (!newItem.name || !newItem.stock || !newItem.max) return
@@ -161,16 +166,39 @@ export function AdminEstoqueView() {
                       R$ {item.cost},00
                     </td>
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
+                        {/* Botão − */}
                         <button onClick={() => adjust(item.id, -1)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-all"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-all flex-shrink-0"
                           style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}
                           onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(239,68,68,0.4)'; b.style.color = '#f87171'; b.style.background = 'rgba(239,68,68,0.06)' }}
                           onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(113,113,122,0.7)'; b.style.background = 'transparent' }}>
                           −
                         </button>
+
+                        {/* Input de quantidade */}
+                        <input
+                          type="number"
+                          min="1"
+                          value={qtys[item.id] ?? '1'}
+                          onChange={e => setQtys(p => ({ ...p, [item.id]: e.target.value }))}
+                          onFocus={e => e.currentTarget.select()}
+                          className="font-mono text-center outline-none transition-all"
+                          style={{
+                            width: '42px', height: '28px', fontSize: '12px',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '8px',
+                            color: 'rgba(255,255,255,0.75)',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(212,175,55,0.3)' }}
+                          onMouseLeave={e => { if (document.activeElement !== e.currentTarget) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+                          onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+                        />
+
+                        {/* Botão + */}
                         <button onClick={() => adjust(item.id, +1)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-all"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-all flex-shrink-0"
                           style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}
                           onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(212,175,55,0.4)'; b.style.color = '#D4AF37'; b.style.background = 'rgba(212,175,55,0.06)' }}
                           onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(113,113,122,0.7)'; b.style.background = 'transparent' }}>

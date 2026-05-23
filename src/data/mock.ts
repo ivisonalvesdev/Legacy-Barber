@@ -28,12 +28,12 @@ export const TIME_SLOTS = [
 ]
 
 export const INVENTORY = [
-  { id: 1, name: 'Pomada Matte',         category: 'Finalizador',  stock: 8,  max: 20,  unit: 'un', cost: 45 },
-  { id: 2, name: 'Óleo de Barba',        category: 'Barba',        stock: 3,  max: 15,  unit: 'un', cost: 38 },
-  { id: 3, name: 'Shampoo Profissional', category: 'Cabelo',       stock: 12, max: 24,  unit: 'un', cost: 55 },
-  { id: 4, name: 'Navalha Descartável',  category: 'Instrumental', stock: 45, max: 100, unit: 'cx', cost: 12 },
-  { id: 5, name: 'Cera Modeladora',      category: 'Finalizador',  stock: 2,  max: 10,  unit: 'un', cost: 42 },
-  { id: 6, name: 'Condicionador',        category: 'Cabelo',       stock: 7,  max: 20,  unit: 'un', cost: 48 },
+  { id: 1, name: 'Pomada Matte',         category: 'Finalizador',  stock: 8,  max: 120, unit: 'un', cost: 45 },
+  { id: 2, name: 'Óleo de Barba',        category: 'Barba',        stock: 3,  max: 100, unit: 'un', cost: 38 },
+  { id: 3, name: 'Shampoo Profissional', category: 'Cabelo',       stock: 12, max: 150, unit: 'un', cost: 55 },
+  { id: 4, name: 'Navalha Descartável',  category: 'Instrumental', stock: 45, max: 500, unit: 'cx', cost: 12 },
+  { id: 5, name: 'Cera Modeladora',      category: 'Finalizador',  stock: 2,  max: 80,  unit: 'un', cost: 42 },
+  { id: 6, name: 'Condicionador',        category: 'Cabelo',       stock: 7,  max: 120, unit: 'un', cost: 48 },
 ]
 
 export const AGENDA_HOJE = [
