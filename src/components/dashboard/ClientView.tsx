@@ -8,56 +8,83 @@ interface ClientViewProps {
   user: AppUser
 }
 
-// ── Confetti ─────────────────────────────────────────────────
+// ── Confetti burst ────────────────────────────────────────────
+// Todos os confetes partem do centro do círculo (py-16 = 64px + h-24/2 = 48px → top 112px).
+// Animação em 3 fases:
+//   0→17%  burst rápido para fora  (easeOut)
+//   17→55% arco descendente lento  (easeIn)
+//   55→100% queda com aceleração   (easeIn)
+
 const CONFETTI_COLORS = [
-  '#D4AF37', '#ECCb52', '#F5D76E', '#FFF4D0',  // dourados
-  '#B8951F', '#A07818',                          // dourado escuro
-  '#FFFFFF', 'rgba(255,255,255,0.7)',             // brancos
-  '#F59E0B', '#FBBF24',                          // ambar
+  '#D4AF37', '#ECCb52', '#F5D76E', '#FFF4D0',   // dourados
+  '#B8951F', '#C4A227',                           // dourado escuro
+  '#FFFFFF', 'rgba(255,255,255,0.85)',             // branco
+  '#F59E0B', '#FBBF24',                           // âmbar
 ]
 
-const PIECES = Array.from({ length: 72 }, (_, i) => ({
-  id:       i,
-  left:     `${1 + (i * 13.7 + 3) % 97}%`,
-  delay:    (i * 0.047) % 1.6,
-  duration: 2.1 + (i % 7) * 0.28,
-  color:    CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-  w:        5 + (i % 5) * 2.2,
-  h:        4 + (i % 4) * 1.8,
-  drift:    ((i % 11) - 5) * 22,
-  rotate:   (i % 2 === 0 ? 1 : -1) * (180 + (i % 6) * 90),
-  round:    i % 4 === 0,
-}))
+// Ângulo de ouro (137.508°) distribui pontos sem agrupamento visual
+const PIECES = Array.from({ length: 80 }, (_, i) => {
+  const angle   = ((i * 137.508) % 360) * (Math.PI / 180)
+  const rFactor = 0.3 + ((i * 17 + 7) % 100) / 143       // 0.3 → 1.0
+  const burstR  = 60 + rFactor * 120                       // 60 → 180 px
+  return {
+    id:    i,
+    // posição do burst (relativa ao centro do círculo)
+    bx:    Math.cos(angle) * burstR,
+    by:    Math.sin(angle) * burstR,
+    // queda após o burst  (sempre para baixo)
+    fdx:   ((i * 13 + 5) % 80) - 40,                       // drift lateral ±40 px
+    fdy:   400 + (i * 23 % 320),                            // queda 400→720 px
+    // timing
+    dur:   4.0 + (i * 7 % 100) / 55,                       // 4.0 → 5.8 s  (lento)
+    delay: (i * 31 % 43) / 140,                             // 0 → 0.31 s
+    // visual
+    rot:   (i % 2 ? 1 : -1) * (240 + i * 67 % 360),
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    w:     5 + (i % 5) * 2,
+    h:     4 + (i % 4) * 2,
+    round: i % 5 === 0,
+  }
+})
 
 function ConfettiRain() {
   const reduced = useReducedMotion()
   if (reduced) return null
+
+  // div de tamanho zero posicionada no centro exato do círculo
+  // circle center-y = py-16(64px) + h-24/2(48px) = 112px
   return (
-    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, overflow: 'hidden' }}>
+    <div
+      aria-hidden
+      style={{
+        position: 'absolute', left: '50%', top: '112px',
+        width: 0, height: 0, zIndex: 0, pointerEvents: 'none',
+      }}>
       {PIECES.map(p => (
         <motion.div
           key={p.id}
-          initial={{ y: -20, x: 0, rotate: 0, opacity: 1 }}
+          initial={{ x: 0, y: 0, rotate: 0, opacity: 0.95 }}
           animate={{
-            y:       900,
-            x:       p.drift,
-            rotate:  p.rotate,
-            opacity: [1, 1, 0.8, 0],
+            // 4 pontos: origem → pico do burst → meio da queda → fim da queda
+            x:      [0,    p.bx,                p.bx + p.fdx * 0.55,  p.bx + p.fdx],
+            y:      [0,    p.by,                p.by + p.fdy * 0.38,   p.by + p.fdy],
+            rotate: [0,    p.rot * 0.35,        p.rot * 0.72,           p.rot],
+            opacity:[0.95, 1,                   0.78,                   0],
           }}
           transition={{
-            duration: p.duration,
+            duration: p.dur,
             delay:    p.delay,
-            ease:     [0.15, 0.55, 0.7, 1],
-            opacity:  { times: [0, 0.55, 0.8, 1] },
+            times:    [0, 0.17, 0.52, 1],
+            ease:     ['easeOut', 'easeIn', 'easeIn'],
           }}
           style={{
-            position:     'absolute',
-            left:          p.left,
-            top:           0,
-            width:         p.w,
-            height:        p.round ? p.w : p.h,
-            background:    p.color,
-            borderRadius:  p.round ? '50%' : '2px',
+            position:    'absolute',
+            left:        -p.w / 2,   // centraliza a peça no ponto de origem
+            top:         -p.h / 2,
+            width:        p.w,
+            height:       p.round ? p.w : p.h,
+            background:   p.color,
+            borderRadius: p.round ? '50%' : '2px',
           }}
         />
       ))}
