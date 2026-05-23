@@ -1,3 +1,4 @@
+import type { ElementType } from 'react'
 import { motion } from 'framer-motion'
 import { Calendar, Clock, User, Package, Users, LayoutDashboard, BarChart2, Scissors, LogOut } from 'lucide-react'
 import type { AppUser, UserRole } from '../../types'
@@ -9,7 +10,7 @@ interface SidebarProps {
   onLogout: () => void
 }
 
-const NAV_MAP: Record<UserRole, { id: string; label: string; icon: React.ElementType }[]> = {
+export const NAV_MAP: Record<UserRole, { id: string; label: string; icon: ElementType }[]> = {
   client: [
     { id: 'agenda',       label: 'Agendar',           icon: Calendar       },
     { id: 'agendamentos', label: 'Meus Agendamentos', icon: Clock          },
