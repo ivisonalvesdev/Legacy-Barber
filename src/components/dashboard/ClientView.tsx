@@ -58,7 +58,7 @@ function ConfettiRain() {
       aria-hidden
       style={{
         position: 'absolute', left: '50%', top: '112px',
-        width: 0, height: 0, zIndex: 0, pointerEvents: 'none',
+        width: 0, height: 0, zIndex: -1, pointerEvents: 'none',
       }}>
       {PIECES.map(p => (
         <motion.div
@@ -117,15 +117,14 @@ export function ClientView({ user }: ClientViewProps) {
   ]
 
   if (confirmed) return (
-    /* container relativo + overflow hidden para clipar os confetes */
-    <div className="relative" style={{ minHeight: '80vh', overflow: 'hidden' }}>
-      {/* confetes caem atrás de todo o conteúdo */}
+    /* isolation:isolate cria stacking context próprio — confetes ficam em z:-1
+       sem vazar para fora do container nem cobrir nenhum elemento de conteúdo */
+    <div className="relative" style={{ minHeight: '80vh', overflow: 'hidden', isolation: 'isolate' }}>
       <ConfettiRain />
 
-      {/* conteúdo acima dos confetes */}
       <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
         className="relative flex flex-col items-center text-center max-w-md mx-auto py-16"
-        style={{ zIndex: 10 }}>
+        style={{ zIndex: 1 }}>
 
         {/* ícone pulsante */}
         <motion.div
