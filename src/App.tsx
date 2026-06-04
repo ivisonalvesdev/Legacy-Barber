@@ -28,24 +28,47 @@ export default function App() {
   // ── Restaura sessão ao recarregar a página ─────────────────
   useEffect(() => {
     const fetchProfile = async (userId: string, email: string) => {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-      if (data) {
-        setUser({
-          id:             data.id,
-          name:           data.name,
-          email,
-          phone:          data.phone          ?? '',
-          role:           data.role           as UserRole,
-          specialty:      data.specialty      ?? undefined,
-          barbershopName: data.barbershop_name ?? undefined,
-          avatar:         data.avatar          ?? '',
-        })
-        setTab(data.role === 'admin' ? 'dashboard' : 'agenda')
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single()
+
+        if (data) {
+          let barbershopName: string | undefined
+          if (data.barbershop_id) {
+            const { data: shop } = await supabase
+              .from('barbershops').select('name')
+              .eq('id', data.barbershop_id).single()
+            barbershopName = shop?.name
+          }
+
+          setUser({
+            id:             data.id,
+            name:           data.name,
+            email,
+            phone:          data.phone         ?? '',
+            role:           data.role          as UserRole,
+            barbershopId:   data.barbershop_id ?? undefined,
+            barbershopName,
+            specialty:      data.specialty     ?? undefined,
+            avatar:         data.avatar        ?? '',
+          })
+          setTab(data.role === 'admin' ? 'dashboard' : 'agenda')
+        }
+      } catch (err) {
+        console.error('[fetchProfile] Falha ao restaurar sessão:', err)
+      } finally {
+        setAuthLoading(false)
       }
-      setAuthLoading(false)
     }
 
+    // Timeout de segurança: se Supabase não responder em 8s, libera a landing page
+    const fallback = setTimeout(() => setAuthLoading(false), 8000)
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      clearTimeout(fallback)
       if (event === 'INITIAL_SESSION') {
         if (session?.user) {
           await fetchProfile(session.user.id, session.user.email!)
@@ -58,7 +81,7 @@ export default function App() {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => { subscription.unsubscribe(); clearTimeout(fallback) }
   }, [])
 
   const openAuth: OpenAuthFn = (mode = 'login') => { setAuthMode(mode); setShowAuth(true) }
@@ -99,7 +122,7 @@ export default function App() {
   // ── Admin view router ──────────────────────────────────────
   function AdminView() {
     if (tab === 'estoque')    return <AdminEstoqueView />
-    if (tab === 'equipe')     return <AdminEquipeView />
+    if (tab === 'equipe')     return <AdminEquipeView user={currentUser!} />
     if (tab === 'relatorios') return <AdminRelatoriosView />
     return <AdminDashboardView user={currentUser!} />
   }

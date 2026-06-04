@@ -1,21 +1,58 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { INVENTORY, AGENDA_HOJE } from '../../data/mock'
+import { supabase } from '../../lib/supabase'
 import { TiltCard } from '../ui/TiltCard'
 
 interface BarberViewProps {
   user: AppUser
 }
 
+type AgendaItem = {
+  time: string
+  client: string
+  service: string
+  status: 'done' | 'current' | 'upcoming'
+}
+
 export function BarberView({ user }: BarberViewProps) {
-  const [inv, setInv] = useState(INVENTORY)
+  const [inv,    setInv]    = useState(INVENTORY)
+  const [agenda, setAgenda] = useState<AgendaItem[]>([])
+  const [stats,  setStats]  = useState({ count: 0, revenue: 0 })
+
   const use1 = (id: number) => setInv(p => p.map(i => i.id === id ? { ...i, stock: Math.max(0, i.stock - 1) } : i))
 
   const today    = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   const hour     = new Date().getHours()
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
+
+  useEffect(() => {
+    const todayISO = new Date().toISOString().split('T')[0]
+    supabase
+      .from('bookings')
+      .select('time, service_name, service_price, status, client:profiles!bookings_client_id_fkey(name)')
+      .eq('barber_id', user.id)
+      .eq('date', todayISO)
+      .order('time')
+      .then(({ data }) => {
+        if (!data) return
+        const items: AgendaItem[] = data.map((b: any) => ({
+          time:    b.time,
+          client:  b.client?.name ?? 'Cliente',
+          service: b.service_name,
+          status:  b.status as AgendaItem['status'],
+        }))
+        setAgenda(items)
+        setStats({
+          count:   items.length,
+          revenue: data
+            .filter((b: any) => b.status === 'done')
+            .reduce((s: number, b: any) => s + Number(b.service_price), 0),
+        })
+      })
+  }, [user.id])
 
   return (
     <div className="space-y-8">
@@ -33,13 +70,13 @@ export function BarberView({ user }: BarberViewProps) {
           <TiltCard className="rounded-xl p-4"
             style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(255,255,255,0.07)' }}>
             <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Atendimentos</div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: 'white' }}>6</div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: 'white' }}>{stats.count || '—'}</div>
             <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '2px' }}>hoje</div>
           </TiltCard>
           <TiltCard className="rounded-xl p-4"
             style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.15)', boxShadow: '0 0 30px rgba(212,175,55,0.06)' }}>
             <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Faturamento</div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: '#D4AF37' }}>R$ 520</div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: '#D4AF37' }}>R$ {stats.revenue || '—'}</div>
             <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '2px' }}>hoje</div>
           </TiltCard>
         </div>
@@ -53,7 +90,7 @@ export function BarberView({ user }: BarberViewProps) {
         <div className="space-y-2 relative">
           <div className="absolute left-[21px] top-3 bottom-3 w-px"
             style={{ background: 'linear-gradient(to bottom, rgba(212,175,55,0.14), rgba(255,255,255,0.03))' }} />
-          {AGENDA_HOJE.map((slot, idx) => (
+          {(agenda.length > 0 ? agenda : AGENDA_HOJE).map((slot, idx) => (
             <motion.div key={idx}
               initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.07 }}

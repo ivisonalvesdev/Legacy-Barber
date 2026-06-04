@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scissors, User, LogIn, UserPlus, Eye, EyeOff,
-  Phone, Lock, Mail, Building2, Crown, Sparkles,
+  Phone, Lock, Mail, Building2, Crown, Sparkles, Hash,
 } from 'lucide-react'
 import type { AppUser, UserRole } from '../../types'
 import { AuthInput } from '../ui/AuthInput'
-import { supabase } from '../../lib/supabase'
+import { supabase }  from '../../lib/supabase'
 
 interface AuthFormProps {
   onAuth: (user: AppUser) => void
@@ -19,7 +19,10 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
   const [showPass, setShowPass] = useState(false)
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
-  const [form, setForm]         = useState({ name: '', email: '', phone: '', password: '', specialty: '', barbershopName: '' })
+  const [form, setForm]         = useState({
+    name: '', email: '', phone: '', password: '',
+    specialty: '', barbershopName: '', inviteCode: '',
+  })
 
   const set = (k: keyof typeof form) => (v: string) => setForm(p => ({ ...p, [k]: v }))
 
@@ -34,83 +37,149 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
     setLoading(true)
 
     try {
+      // ── LOGIN ──────────────────────────────────────────────────────
       if (mode === 'login') {
         const { data, error: authErr } = await supabase.auth.signInWithPassword({
-          email: form.email,
-          password: form.password,
+          email: form.email, password: form.password,
         })
-        if (authErr || !data.user) throw new Error('E-mail ou senha incorretos.')
+        if (authErr) {
+          if (authErr.message.toLowerCase().includes('email not confirmed'))
+            throw new Error('✉️ Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.')
+          throw new Error('E-mail ou senha incorretos.')
+        }
+        if (!data.user) throw new Error('E-mail ou senha incorretos.')
 
         const { data: profile, error: profileErr } = await supabase
-          .from('profiles').select('*').eq('id', data.user.id).single()
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single()
 
         if (profileErr || !profile) throw new Error('Perfil não encontrado. Tente novamente.')
 
-        if (profile.role !== role) {
-          await supabase.auth.signOut()
-          const labels: Record<string, string> = { admin: 'Proprietário', barber: 'Barbeiro', client: 'Cliente' }
-          throw new Error(`Esta conta está cadastrada como "${labels[profile.role] ?? profile.role}".`)
+        // Busca nome da barbearia separado (mais robusto que join FK)
+        let barbershopName: string | undefined
+        if (profile.barbershop_id) {
+          const { data: shop } = await supabase
+            .from('barbershops').select('name')
+            .eq('id', profile.barbershop_id).single()
+          barbershopName = shop?.name
         }
 
         onAuth({
           id:             profile.id,
           name:           profile.name,
           email:          data.user.email!,
-          phone:          profile.phone ?? '',
-          role:           profile.role as UserRole,
-          specialty:      profile.specialty      ?? undefined,
-          barbershopName: profile.barbershop_name ?? undefined,
-          avatar:         profile.avatar          ?? '',
+          phone:          profile.phone         ?? '',
+          role:           profile.role          as UserRole,
+          barbershopId:   profile.barbershop_id ?? undefined,
+          barbershopName,
+          specialty:      profile.specialty     ?? undefined,
+          avatar:         profile.avatar        ?? '',
         })
-
-      } else {
-        // ── Cadastro ──────────────────────────────────────────
-        if (!form.name || !form.email || !form.phone || !form.password)
-          throw new Error('Preencha todos os campos obrigatórios.')
-        if (form.password.length < 6)
-          throw new Error('A senha deve ter pelo menos 6 caracteres.')
-
-        const { data, error: signUpErr } = await supabase.auth.signUp({
-          email:    form.email,
-          password: form.password,
-          options: {
-            data: {
-              name:            form.name,
-              role,
-              phone:           form.phone,
-              specialty:       role === 'barber' ? form.specialty      || null : null,
-              barbershop_name: role === 'admin'  ? form.barbershopName || null : null,
-            },
-          },
-        })
-
-        if (signUpErr) throw new Error(
-          signUpErr.message.includes('already registered')
-            ? 'Este e-mail já está cadastrado.'
-            : signUpErr.message
-        )
-        // Email confirmation habilitado — usuário criado mas aguarda confirmação
-        if (!data.session) {
-          setError('✉️ Conta criada! Verifique seu e-mail para confirmar o cadastro.')
-          setLoading(false)
-          return
-        }
-
-        if (!data.user) throw new Error('Erro ao criar conta. Tente novamente.')
-
-        const initials = form.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
-
-        onAuth({
-          id:             data.user.id,
-          name:           form.name,
-          email:          form.email,
-          phone:          form.phone,
-          role,
-          specialty:      role === 'barber' ? form.specialty      || undefined : undefined,
-          barbershopName: role === 'admin'  ? form.barbershopName || undefined : undefined,
-          avatar:         initials,
-        })
+        return
       }
+
+      // ── CADASTRO ───────────────────────────────────────────────────
+      if (!form.name || !form.email || !form.phone || !form.password)
+        throw new Error('Preencha todos os campos obrigatórios.')
+      if (form.password.length < 6)
+        throw new Error('A senha deve ter pelo menos 6 caracteres.')
+
+      // Barber precisa de código de convite
+      if (role === 'barber' && !form.inviteCode.trim())
+        throw new Error('Insira o código da barbearia fornecido pelo proprietário.')
+
+      // Valida código de convite (antes de criar a conta)
+      let targetShopId: string | null = null
+      let targetShopName: string | null = null
+      if (role === 'barber') {
+        const { data: shop, error: shopErr } = await supabase
+          .from('barbershops')
+          .select('id, name')
+          .eq('invite_code', form.inviteCode.trim().toUpperCase())
+          .single()
+        if (shopErr || !shop) throw new Error('Código de convite inválido. Verifique com o proprietário.')
+        targetShopId   = shop.id
+        targetShopName = shop.name
+      }
+
+      // Cria conta no Supabase Auth
+      const { data, error: signUpErr } = await supabase.auth.signUp({
+        email:    form.email,
+        password: form.password,
+        options: {
+          data: {
+            name:            form.name,
+            role,
+            phone:           form.phone,
+            specialty:       role === 'barber' ? form.specialty      || null : null,
+            barbershop_name: role === 'admin'  ? form.barbershopName || null : null,
+          },
+        },
+      })
+
+      if (signUpErr) throw new Error(
+        signUpErr.message.includes('already registered')
+          ? 'Este e-mail já está cadastrado.'
+          : signUpErr.message
+      )
+
+      // Confirmação de e-mail habilitada — sem sessão ainda
+      if (!data.session) {
+        setError('✉️ Conta criada! Verifique seu e-mail para confirmar o cadastro.')
+        setLoading(false)
+        return
+      }
+
+      if (!data.user) throw new Error('Erro ao criar conta. Tente novamente.')
+
+      // Aguarda o trigger do Supabase criar a linha em profiles antes de atualizar
+      await new Promise(r => setTimeout(r, 1200))
+
+      const userId   = data.user.id
+      const initials = form.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+
+      // ── Admin: cria barbearia e vincula ao perfil ─────────────────
+      let barbershopId:   string | undefined
+      let barbershopName: string | undefined
+
+      if (role === 'admin') {
+        const shopName = form.barbershopName.trim() || 'Minha Barbearia'
+
+        const { data: shop, error: shopErr } = await supabase
+          .from('barbershops')
+          .insert({ name: shopName, owner_id: userId })
+          .select('id, name')
+          .single()
+
+        if (shopErr || !shop) throw new Error('Erro ao criar barbearia. Tente novamente.')
+
+        await supabase.from('profiles').update({ barbershop_id: shop.id }).eq('id', userId)
+
+        barbershopId   = shop.id
+        barbershopName = shop.name
+      }
+
+      // ── Barber: vincula à barbearia pelo invite_code ──────────────
+      if (role === 'barber' && targetShopId) {
+        await supabase.from('profiles').update({ barbershop_id: targetShopId }).eq('id', userId)
+        barbershopId   = targetShopId
+        barbershopName = targetShopName ?? undefined
+      }
+
+      onAuth({
+        id:             userId,
+        name:           form.name,
+        email:          form.email,
+        phone:          form.phone,
+        role,
+        barbershopId,
+        barbershopName,
+        specialty:  role === 'barber' ? form.specialty      || undefined : undefined,
+        avatar:     initials,
+      })
+
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro desconhecido.')
     } finally {
@@ -165,48 +234,51 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
         ))}
       </div>
 
-      {/* Role selector */}
-      <div className="mb-5">
-        <p style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>
-          Entrar como
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          {roleCards.map(rc => {
-            const Icon = rc.icon
-            const sel = role === rc.value
-            return (
-              <motion.button key={rc.value}
-                whileHover={{ y: -2, scale: 1.01 }} whileTap={{ scale: 0.97 }}
-                onClick={() => { setRole(rc.value); setError('') }}
-                className="relative flex flex-col items-center gap-2 p-3 rounded-2xl text-center transition-all duration-200"
-                style={{
-                  background: sel ? 'rgba(212,175,55,0.08)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${sel ? 'rgba(212,175,55,0.4)' : 'rgba(255,255,255,0.05)'}`,
-                  boxShadow: sel ? '0 0 30px rgba(212,175,55,0.12), inset 0 0 20px rgba(212,175,55,0.03)' : 'none',
-                }}>
-                {rc.badge && (
-                  <div style={{
-                    position: 'absolute', top: 6, right: 6,
-                    fontSize: '7px', fontWeight: 700, letterSpacing: '0.08em',
-                    padding: '1px 5px', borderRadius: '4px',
-                    background: 'rgba(212,175,55,0.14)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.2)',
-                  }}>{rc.badge}</div>
-                )}
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+      {/* Role selector — só no cadastro */}
+      {mode === 'register' ? (
+        <div className="mb-5">
+          <p style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>
+            Cadastrar como
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {roleCards.map(rc => {
+              const Icon = rc.icon
+              const sel  = role === rc.value
+              return (
+                <motion.button key={rc.value}
+                  whileHover={{ y: -2, scale: 1.01 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => { setRole(rc.value); setError('') }}
+                  className="relative flex flex-col items-center gap-2 p-3 rounded-2xl text-center transition-all duration-200"
                   style={{
-                    background: sel ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${sel ? 'rgba(212,175,55,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                    background:  sel ? 'rgba(212,175,55,0.08)' : 'rgba(255,255,255,0.02)',
+                    border:      `1px solid ${sel ? 'rgba(212,175,55,0.4)' : 'rgba(255,255,255,0.05)'}`,
+                    boxShadow:   sel ? '0 0 30px rgba(212,175,55,0.12), inset 0 0 20px rgba(212,175,55,0.03)' : 'none',
                   }}>
-                  <Icon size={14} style={{ color: sel ? '#D4AF37' : 'rgba(113,113,122,0.6)' }} />
-                </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: sel ? '#D4AF37' : 'rgba(161,161,170,0.65)' }}>
-                  {rc.label}
-                </span>
-              </motion.button>
-            )
-          })}
+                  {rc.badge && (
+                    <div style={{
+                      position: 'absolute', top: 6, right: 6,
+                      fontSize: '7px', fontWeight: 700, letterSpacing: '0.08em',
+                      padding: '1px 5px', borderRadius: '4px',
+                      background: 'rgba(212,175,55,0.14)', color: '#D4AF37',
+                      border: '1px solid rgba(212,175,55,0.2)',
+                    }}>{rc.badge}</div>
+                  )}
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                    style={{
+                      background: sel ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.04)',
+                      border:     `1px solid ${sel ? 'rgba(212,175,55,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                    }}>
+                    <Icon size={14} style={{ color: sel ? '#D4AF37' : 'rgba(113,113,122,0.6)' }} />
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: sel ? '#D4AF37' : 'rgba(161,161,170,0.65)' }}>
+                    {rc.label}
+                  </span>
+                </motion.button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Fields */}
       <AnimatePresence mode="wait">
@@ -214,6 +286,7 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2 }}
           className="space-y-3">
+
           {mode === 'register' && (
             <AuthInput label="Nome completo" value={form.name} onChange={set('name')} icon={User} placeholder="Seu nome" />
           )}
@@ -223,6 +296,16 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
           {mode === 'register' && role === 'barber' && (
             <AuthInput label="Especialidade" value={form.specialty} onChange={set('specialty')} icon={Scissors} placeholder="Ex: Degradê, Barba Artística" />
           )}
+          {mode === 'register' && role === 'barber' && (
+            <AuthInput
+              label="Código da Barbearia"
+              value={form.inviteCode}
+              onChange={v => set('inviteCode')(v.toUpperCase())}
+              icon={Hash}
+              placeholder="Ex: A3F901"
+            />
+          )}
+
           <AuthInput label="E-mail" type="email" value={form.email} onChange={set('email')} icon={Mail} placeholder="seu@email.com" />
           {mode === 'register' && (
             <AuthInput label="Telefone / WhatsApp" type="tel" value={form.phone} onChange={set('phone')} icon={Phone} placeholder="(11) 99999-0000" />
