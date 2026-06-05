@@ -1,11 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Clock, Star, Check, ChevronLeft, ChevronRight, CheckCircle, BadgeCheck, Scissors } from 'lucide-react'
 import type { AppUser } from '../../types'
-import { SERVICES, BARBERS, TIME_SLOTS } from '../../data/mock'
+import { SERVICES, TIME_SLOTS } from '../../data/mock'
+import { supabase } from '../../lib/supabase'
 
 interface ClientViewProps {
   user: AppUser
+}
+
+type Barber = {
+  id:           string
+  name:         string
+  specialty:    string
+  avatar:       string
+  available:    boolean
+  rating:       number
+  barbershopId: string | null
 }
 
 // ── Confetti burst ────────────────────────────────────────────
@@ -95,7 +106,10 @@ function ConfettiRain() {
 export function ClientView({ user }: ClientViewProps) {
   const [step, setStep]           = useState<1 | 2 | 3 | 4>(1)
   const [selService, setSelService] = useState<typeof SERVICES[0] | null>(null)
-  const [selBarber,  setSelBarber]  = useState<typeof BARBERS[0]  | null>(null)
+  const [selBarber,  setSelBarber]  = useState<Barber | null>(null)
+  const [barbers,    setBarbers]    = useState<Barber[]>([])
+  const [saving,     setSaving]     = useState(false)
+  const [bookingErr, setBookingErr] = useState('')
   const [selTime,    setSelTime]    = useState<string | null>(null)
   const [selDate,    setSelDate]    = useState(() => new Date().toISOString().split('T')[0])
   const [confirmed,  setConfirmed]  = useState(false)
@@ -115,6 +129,42 @@ export function ClientView({ user }: ClientViewProps) {
     { n: 3, label: 'Data & Hora'  },
     { n: 4, label: 'Confirmação'  },
   ]
+
+  // Busca barbeiros reais do banco (incluindo barbershop_id para o insert)
+  useEffect(() => {
+    supabase.from('profiles').select('id,name,specialty,avatar,barbershop_id').eq('role', 'barber')
+      .then(({ data }) => {
+        if (data) setBarbers(data.map(b => ({
+          id:           b.id,
+          name:         b.name,
+          specialty:    b.specialty ?? 'Barbeiro',
+          avatar:       b.avatar ?? b.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase(),
+          available:    true,
+          rating:       4.9,
+          barbershopId: b.barbershop_id ?? null,
+        })))
+      })
+  }, [])
+
+  // Salva agendamento no Supabase
+  const handleConfirm = async () => {
+    if (!selService || !selBarber || !selTime) return
+    setSaving(true)
+    setBookingErr('')
+    const { error } = await supabase.from('bookings').insert({
+      client_id:     user.id,
+      barber_id:     selBarber.id,
+      barbershop_id: selBarber.barbershopId,   // ← tenant isolation
+      service_name:  selService.name,
+      service_price: selService.price,
+      date:          selDate,
+      time:          selTime,
+      status:        'upcoming',
+    })
+    setSaving(false)
+    if (error) setBookingErr('Erro ao salvar agendamento. Tente novamente.')
+    else       setConfirmed(true)
+  }
 
   if (confirmed) return (
     /* isolation:isolate cria stacking context próprio — confetes ficam em z:-1
@@ -254,7 +304,12 @@ export function ClientView({ user }: ClientViewProps) {
               Escolha seu profissional
             </h2>
             <div className="space-y-3">
-              {BARBERS.map((b, idx) => {
+              {barbers.length === 0 && (
+                <p className="col-span-3 text-center py-4" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+                  Nenhum barbeiro cadastrado ainda.
+                </p>
+              )}
+              {barbers.map((b, idx) => {
                 const sel = selBarber?.id === b.id
                 return (
                   <motion.button key={b.id}
@@ -360,12 +415,19 @@ export function ClientView({ user }: ClientViewProps) {
                 </div>
               </div>
             </div>
+            {bookingErr && (
+              <p className="text-xs text-center mb-2" style={{ color: '#f87171' }}>{bookingErr}</p>
+            )}
             <motion.button
               whileHover={{ scale: 1.01, boxShadow: '0 0 50px rgba(212,175,55,0.35)' }} whileTap={{ scale: 0.99 }}
-              onClick={() => setConfirmed(true)}
-              className="w-full py-3.5 rounded-xl font-semibold text-black text-sm"
-              style={{ background: 'linear-gradient(135deg, #B8951F, #D4AF37, #ECCb52)', letterSpacing: '0.02em' }}>
-              Confirmar Agendamento
+              onClick={handleConfirm} disabled={saving}
+              className="w-full py-3.5 rounded-xl font-semibold text-black text-sm flex items-center justify-center gap-2"
+              style={{ background: saving ? 'rgba(212,175,55,0.4)' : 'linear-gradient(135deg, #B8951F, #D4AF37, #ECCb52)', letterSpacing: '0.02em', cursor: saving ? 'not-allowed' : 'pointer' }}>
+              {saving ? (
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                  <Scissors size={15} />
+                </motion.div>
+              ) : 'Confirmar Agendamento'}
             </motion.button>
           </motion.div>
         )}

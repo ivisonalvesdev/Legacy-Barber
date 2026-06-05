@@ -1,18 +1,30 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { DollarSign, TrendingUp, Users, Activity, ArrowUpRight, Plus, Clock } from 'lucide-react'
 import type { AppUser } from '../../types'
-import { AGENDA_HOJE } from '../../data/mock'
 import { StatCard }     from '../ui/StatCard'
 import { RevenueChart } from './RevenueChart'
+import { supabase }     from '../../lib/supabase'
 
 interface AdminDashboardViewProps { user: AppUser }
 
-const TOP_SERVICES = [
-  { name: 'Corte + Barba',       pct: 38, value: 'R$ 4.960' },
-  { name: 'Corte Clássico',      pct: 27, value: 'R$ 3.510' },
-  { name: 'Barba Completa',      pct: 18, value: 'R$ 2.340' },
-  { name: 'Tratamento Capilar',  pct: 17, value: 'R$ 2.210' },
-]
+type AgendaItem = {
+  time:    string
+  client:  string
+  service: string
+  status:  'done' | 'current' | 'upcoming'
+}
+
+type ServiceStat = {
+  name:  string
+  pct:   number
+  value: string
+}
+
+type RevenuePoint = {
+  day:   string
+  value: number
+}
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   done:    { label: 'Concluído',  color: '#4ade80', bg: 'rgba(74,222,128,0.1)'  },
@@ -20,8 +32,138 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }
   upcoming:{ label: 'Aguardando',color: 'rgba(161,161,170,0.6)', bg: 'rgba(255,255,255,0.04)' },
 }
 
+const DAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
 export function AdminDashboardView({ user }: AdminDashboardViewProps) {
-  const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const todayLabel = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const todayISO   = new Date().toISOString().split('T')[0]
+
+  const [kpis, setKpis]             = useState({ revenueToday: 0, revenueMonth: 0, clientsToday: 0, occupation: 0 })
+  const [agenda, setAgenda]         = useState<AgendaItem[]>([])
+  const [topServices, setTopSvc]    = useState<ServiceStat[]>([])
+  const [revenueData, setRevData]   = useState<RevenuePoint[]>([])
+  const [weekDelta, setWeekDelta]   = useState<number | null>(null)
+  const [loading, setLoading]       = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      if (!user.barbershopId) { setLoading(false); return }
+
+      const bsId       = user.barbershopId
+      const now        = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+      const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+
+      // last 7 days window
+      const d7 = new Date(); d7.setDate(d7.getDate() - 6)
+      const last7Start = d7.toISOString().split('T')[0]
+
+      // previous 7 days window (for delta %)
+      const dp = new Date(); dp.setDate(dp.getDate() - 13)
+      const prev7Start = dp.toISOString().split('T')[0]
+      const prev7End   = new Date(d7.getTime() - 86400000).toISOString().split('T')[0]
+
+      const [todayRes, monthRes, agendaRes, last7Res, prev7Res] = await Promise.all([
+        // KPI hoje
+        supabase.from('bookings')
+          .select('service_price, status')
+          .eq('barbershop_id', bsId)
+          .eq('date', todayISO),
+
+        // KPI mês + top services
+        supabase.from('bookings')
+          .select('service_name, service_price')
+          .eq('barbershop_id', bsId)
+          .eq('status', 'done')
+          .gte('date', monthStart)
+          .lte('date', monthEnd),
+
+        // Agenda do dia com nome do cliente
+        supabase.from('bookings')
+          .select('time, service_name, status, client:profiles!bookings_client_id_fkey(name)')
+          .eq('barbershop_id', bsId)
+          .eq('date', todayISO)
+          .order('time'),
+
+        // Últimos 7 dias para o gráfico
+        supabase.from('bookings')
+          .select('date, service_price')
+          .eq('barbershop_id', bsId)
+          .eq('status', 'done')
+          .gte('date', last7Start)
+          .lte('date', todayISO),
+
+        // 7 dias anteriores para calcular delta
+        supabase.from('bookings')
+          .select('service_price')
+          .eq('barbershop_id', bsId)
+          .eq('status', 'done')
+          .gte('date', prev7Start)
+          .lte('date', prev7End),
+      ])
+
+      // ── KPIs ────────────────────────────────────────────────
+      const todayRows    = todayRes.data  ?? []
+      const monthRows    = monthRes.data  ?? []
+      const revenueToday = todayRows.filter(b => b.status === 'done').reduce((s, b) => s + Number(b.service_price), 0)
+      const revenueMonth = monthRows.reduce((s, b) => s + Number(b.service_price), 0)
+      const clientsToday = todayRows.length
+      const doneCount    = todayRows.filter(b => b.status === 'done').length
+      const occupation   = clientsToday > 0 ? Math.round((doneCount / clientsToday) * 100) : 0
+
+      setKpis({ revenueToday, revenueMonth, clientsToday, occupation })
+
+      // ── Agenda ──────────────────────────────────────────────
+      const items: AgendaItem[] = (agendaRes.data ?? []).map((b: any) => ({
+        time:    b.time,
+        client:  b.client?.name ?? 'Cliente',
+        service: b.service_name,
+        status:  b.status as AgendaItem['status'],
+      }))
+      setAgenda(items)
+
+      // ── Top Services (por receita no mês) ───────────────────
+      const svcMap: Record<string, number> = {}
+      monthRows.forEach(b => {
+        svcMap[b.service_name] = (svcMap[b.service_name] ?? 0) + Number(b.service_price)
+      })
+      const totalRev = Object.values(svcMap).reduce((s, v) => s + v, 0) || 1
+      const top = Object.entries(svcMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([name, rev]) => ({
+          name,
+          pct:   Math.round((rev / totalRev) * 100),
+          value: `R$ ${rev.toLocaleString('pt-BR')}`,
+        }))
+      setTopSvc(top)
+
+      // ── Gráfico — últimos 7 dias ─────────────────────────────
+      const last7Points: RevenuePoint[] = []
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i)
+        const iso = d.toISOString().split('T')[0]
+        const val = (last7Res.data ?? [])
+          .filter((b: any) => b.date === iso)
+          .reduce((s: number, b: any) => s + Number(b.service_price), 0)
+        last7Points.push({ day: DAYS_PT[d.getDay()], value: val })
+      }
+      setRevData(last7Points)
+
+      // ── Delta semana ─────────────────────────────────────────
+      const thisWeekTotal = last7Points.reduce((s, p) => s + p.value, 0)
+      const prevWeekTotal = (prev7Res.data ?? []).reduce((s: number, b: any) => s + Number(b.service_price), 0)
+      if (prevWeekTotal > 0) {
+        setWeekDelta(Math.round(((thisWeekTotal - prevWeekTotal) / prevWeekTotal) * 100))
+      }
+
+      setLoading(false)
+    }
+
+    load()
+  }, [todayISO, user.barbershopId])
+
+  const totalChart = revenueData.reduce((s, p) => s + p.value, 0)
 
   return (
     <div className="space-y-7">
@@ -32,7 +174,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
             Dashboard
           </h1>
           <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
-            {today.charAt(0).toUpperCase() + today.slice(1)} · {user.barbershopName || 'Legacy Barber'}
+            {todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)} · {user.barbershopName || 'Legacy Barber'}
           </p>
         </div>
         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -44,10 +186,10 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={DollarSign} label="Faturamento Hoje" numValue={1240}  prefix="R$ " featured />
-        <StatCard icon={TrendingUp} label="Faturamento Mês"  numValue={28650} prefix="R$ " />
-        <StatCard icon={Users}      label="Clientes Hoje"    numValue={8}     suffix=" atend." />
-        <StatCard icon={Activity}   label="Ocupação"         numValue={78}    suffix="%" />
+        <StatCard icon={DollarSign} label="Faturamento Hoje" numValue={kpis.revenueToday}  prefix="R$ " featured />
+        <StatCard icon={TrendingUp} label="Faturamento Mês"  numValue={kpis.revenueMonth}  prefix="R$ " />
+        <StatCard icon={Users}      label="Clientes Hoje"    numValue={kpis.clientsToday}  suffix=" atend." />
+        <StatCard icon={Activity}   label="Ocupação"         numValue={kpis.occupation}    suffix="%" />
       </div>
 
       {/* Chart + Top Services */}
@@ -58,13 +200,19 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px' }}>Receita — Últimos 7 Dias</h3>
-              <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '12px', marginTop: '2px' }}>Total: R$ 13.200</p>
+              <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '12px', marginTop: '2px' }}>
+                {loading ? '—' : `Total: R$ ${totalChart.toLocaleString('pt-BR')}`}
+              </p>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#4ade80' }}>
-              <ArrowUpRight size={13} />+24% vs semana anterior
-            </div>
+            {weekDelta !== null && (
+              <div className="flex items-center gap-1.5 text-xs font-semibold"
+                style={{ color: weekDelta >= 0 ? '#4ade80' : '#f87171' }}>
+                <ArrowUpRight size={13} style={{ transform: weekDelta < 0 ? 'rotate(90deg)' : undefined }} />
+                {weekDelta >= 0 ? '+' : ''}{weekDelta}% vs semana anterior
+              </div>
+            )}
           </div>
-          <RevenueChart />
+          <RevenueChart data={revenueData.length > 0 ? revenueData : undefined} />
         </div>
 
         {/* Top Services — 1/3 */}
@@ -72,7 +220,12 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px', marginBottom: '16px' }}>Top Serviços</h3>
           <div className="space-y-4">
-            {TOP_SERVICES.map((s, i) => (
+            {(topServices.length > 0 ? topServices : [
+              { name: 'Corte + Barba',      pct: 38, value: '—' },
+              { name: 'Corte Clássico',     pct: 27, value: '—' },
+              { name: 'Barba Completa',     pct: 18, value: '—' },
+              { name: 'Tratamento Capilar', pct: 17, value: '—' },
+            ]).map((s, i) => (
               <div key={i}>
                 <div className="flex items-center justify-between mb-1.5">
                   <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.72)' }}>{s.name}</span>
@@ -98,19 +251,24 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           </h2>
           <div className="flex items-center gap-1.5" style={{ fontSize: '12px', color: 'rgba(113,113,122,0.55)' }}>
             <Clock size={12} />
-            {AGENDA_HOJE.filter(a => a.status === 'done').length} de {AGENDA_HOJE.length} concluídos
+            {agenda.filter(a => a.status === 'done').length} de {agenda.length} concluídos
           </div>
         </div>
         <div className="rounded-2xl overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          {AGENDA_HOJE.map((item, i) => {
-            const s = STATUS_LABELS[item.status]
+          {agenda.length === 0 && !loading && (
+            <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+              Nenhum agendamento para hoje.
+            </p>
+          )}
+          {agenda.map((item, i) => {
+            const s = STATUS_LABELS[item.status] ?? STATUS_LABELS.upcoming
             return (
               <motion.div key={i}
                 initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.06 }}
                 className="flex items-center gap-4 px-5 py-3.5"
-                style={{ borderBottom: i < AGENDA_HOJE.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
+                style={{ borderBottom: i < agenda.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
                 <span style={{ fontFamily: 'monospace', fontSize: '13px', color: 'rgba(113,113,122,0.6)', minWidth: '44px' }}>{item.time}</span>
                 <div className="flex-1">
                   <div style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{item.client}</div>

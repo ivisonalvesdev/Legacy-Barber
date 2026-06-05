@@ -2,16 +2,25 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { REVENUE_DATA } from '../../data/mock'
 
-export function RevenueChart() {
+type Point = { day: string; value: number }
+
+interface RevenueChartProps {
+  /** Dados reais dos últimos 7 dias. Se omitido, usa mock. */
+  data?: Point[]
+}
+
+export function RevenueChart({ data }: RevenueChartProps) {
   const [hov, setHov] = useState<number | null>(null)
+  const chartData = data && data.length > 0 ? data : REVENUE_DATA
+
   const W = 600, H = 160
   const P = { t: 10, r: 20, b: 28, l: 10 }
   const iW = W - P.l - P.r
   const iH = H - P.t - P.b
-  const max = Math.max(...REVENUE_DATA.map(d => d.value))
-  const xOf = (i: number) => P.l + (i / (REVENUE_DATA.length - 1)) * iW
+  const max = Math.max(...chartData.map(d => d.value), 1)
+  const xOf = (i: number) => P.l + (i / (chartData.length - 1)) * iW
   const yOf = (v: number) => P.t + iH - (v / max) * iH * 0.88
-  const pts = REVENUE_DATA.map((d, i) => ({ ...d, x: xOf(i), y: yOf(d.value) }))
+  const pts = chartData.map((d, i) => ({ ...d, x: xOf(i), y: yOf(d.value) }))
   const line = pts.reduce((acc, p, i) => {
     if (i === 0) return `M ${p.x} ${p.y}`
     const prev = pts[i - 1]

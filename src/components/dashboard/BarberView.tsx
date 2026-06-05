@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import type { AppUser } from '../../types'
-import { INVENTORY, AGENDA_HOJE } from '../../data/mock'
+import { INVENTORY } from '../../data/mock'
 import { supabase } from '../../lib/supabase'
 import { TiltCard } from '../ui/TiltCard'
 
@@ -11,10 +11,12 @@ interface BarberViewProps {
 }
 
 type AgendaItem = {
-  time: string
-  client: string
+  id:      string
+  time:    string
+  client:  string
   service: string
-  status: 'done' | 'current' | 'upcoming'
+  price:   number
+  status:  'done' | 'current' | 'upcoming'
 }
 
 export function BarberView({ user }: BarberViewProps) {
@@ -32,27 +34,39 @@ export function BarberView({ user }: BarberViewProps) {
     const todayISO = new Date().toISOString().split('T')[0]
     supabase
       .from('bookings')
-      .select('time, service_name, service_price, status, client:profiles!bookings_client_id_fkey(name)')
+      .select('id, time, service_name, service_price, status, client:profiles!bookings_client_id_fkey(name)')
       .eq('barber_id', user.id)
       .eq('date', todayISO)
       .order('time')
       .then(({ data }) => {
         if (!data) return
         const items: AgendaItem[] = data.map((b: any) => ({
+          id:      b.id,
           time:    b.time,
           client:  b.client?.name ?? 'Cliente',
           service: b.service_name,
+          price:   Number(b.service_price),
           status:  b.status as AgendaItem['status'],
         }))
         setAgenda(items)
         setStats({
           count:   items.length,
-          revenue: data
-            .filter((b: any) => b.status === 'done')
-            .reduce((s: number, b: any) => s + Number(b.service_price), 0),
+          revenue: items
+            .filter(a => a.status === 'done')
+            .reduce((s, a) => s + a.price, 0),
         })
       })
   }, [user.id])
+
+  const markDone = async (item: AgendaItem) => {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status: 'done' })
+      .eq('id', item.id)
+    if (error) return
+    setAgenda(prev => prev.map(a => a.id === item.id ? { ...a, status: 'done' } : a))
+    setStats(prev => ({ ...prev, revenue: prev.revenue + item.price }))
+  }
 
   return (
     <div className="space-y-8">
@@ -90,8 +104,13 @@ export function BarberView({ user }: BarberViewProps) {
         <div className="space-y-2 relative">
           <div className="absolute left-[21px] top-3 bottom-3 w-px"
             style={{ background: 'linear-gradient(to bottom, rgba(212,175,55,0.14), rgba(255,255,255,0.03))' }} />
-          {(agenda.length > 0 ? agenda : AGENDA_HOJE).map((slot, idx) => (
-            <motion.div key={idx}
+          {agenda.length === 0 && (
+            <p className="text-center py-6 pl-8" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+              Nenhum agendamento para hoje.
+            </p>
+          )}
+          {agenda.map((slot, idx) => (
+            <motion.div key={slot.id}
               initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.07 }}
               className="flex items-center gap-3 relative"
@@ -130,14 +149,21 @@ export function BarberView({ user }: BarberViewProps) {
                   <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.88)', fontSize: '13px' }} className="truncate">{slot.client}</div>
                   <div style={{ color: 'rgba(113,113,122,0.6)', fontSize: '12px' }} className="truncate">{slot.service}</div>
                 </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
-                  style={{
-                    background: slot.status === 'current' ? 'rgba(212,175,55,0.12)' : slot.status === 'done' ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.04)',
-                    color: slot.status === 'current' ? '#D4AF37' : slot.status === 'done' ? '#4ade80' : 'rgba(113,113,122,0.65)',
-                    border: `1px solid ${slot.status === 'current' ? 'rgba(212,175,55,0.22)' : slot.status === 'done' ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.06)'}`,
-                  }}>
-                  {slot.status === 'done' ? 'Concluído' : slot.status === 'current' ? 'Em andamento' : 'Próximo'}
-                </span>
+                {slot.status === 'done' ? (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                    style={{ background: 'rgba(34,197,94,0.08)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.18)' }}>
+                    Concluído
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => markDone(slot)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold flex-shrink-0 transition-all duration-150"
+                    style={{ background: 'rgba(34,197,94,0.07)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.2)' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(34,197,94,0.15)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(34,197,94,0.07)' }}>
+                    <Check size={10} /> Concluir
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}

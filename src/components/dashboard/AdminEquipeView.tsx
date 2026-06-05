@@ -1,72 +1,96 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Plus, X, Check, TrendingUp, Clock, Scissors } from 'lucide-react'
-import { MOCK_USERS } from '../../data/mock'
+import { Users, Plus, X, Check, TrendingUp, Clock, Scissors, Copy, CheckCheck } from 'lucide-react'
+import type { AppUser } from '../../types'
+import { supabase } from '../../lib/supabase'
 
-interface TeamMember {
-  id: string
-  name: string
-  specialty: string
-  rating: number
-  avatar: string
-  active: boolean
-  appointmentsToday: number
-  revenueToday: number
-  phone: string
+interface AdminEquipeViewProps {
+  user: AppUser
 }
 
-const INITIAL_TEAM: TeamMember[] = MOCK_USERS
-  .filter(u => u.role === 'barber')
-  .map((u, i) => ({
-    id: u.id,
-    name: u.name,
-    specialty: u.specialty || 'Corte Clássico',
-    rating: [4.9, 4.8][i] ?? 4.7,
-    avatar: u.avatar,
-    active: true,
-    appointmentsToday: [6, 5][i] ?? 4,
-    revenueToday: [480, 360][i] ?? 300,
-    phone: u.phone,
-  }))
+type TeamMember = {
+  id:                string
+  name:              string
+  specialty:         string
+  rating:            number
+  avatar:            string
+  active:            boolean
+  appointmentsToday: number
+  revenueToday:      number
+  phone:             string
+}
 
-// Adicionar um barbeiro inativo de exemplo
-INITIAL_TEAM.push({
-  id: 'demo-3',
-  name: 'Vinicius Ferreira',
-  specialty: 'Corte Clássico',
-  rating: 4.9,
-  avatar: 'VF',
-  active: false,
-  appointmentsToday: 0,
-  revenueToday: 0,
-  phone: '11999990005',
-})
-
-export function AdminEquipeView() {
-  const [team, setTeam]         = useState<TeamMember[]>(INITIAL_TEAM)
+export function AdminEquipeView({ user }: AdminEquipeViewProps) {
+  const [team, setTeam]         = useState<TeamMember[]>([])
+  const [inviteCode, setCode]   = useState<string>('')
+  const [copied, setCopied]     = useState(false)
   const [showInvite, setInvite] = useState(false)
-  const [form, setForm]         = useState({ name: '', specialty: '', phone: '' })
+  const [loading, setLoading]   = useState(true)
+
+  const todayISO = new Date().toISOString().split('T')[0]
+
+  // ── Carrega equipe + código de convite ───────────────────────
+  useEffect(() => {
+    if (!user.barbershopId) { setLoading(false); return }
+
+    const load = async () => {
+      const [shopRes, membersRes, bookingsRes] = await Promise.all([
+        // Código de convite
+        supabase.from('barbershops')
+          .select('invite_code')
+          .eq('id', user.barbershopId!)
+          .single(),
+
+        // Barbeiros desta barbearia
+        supabase.from('profiles')
+          .select('id, name, specialty, avatar, phone')
+          .eq('barbershop_id', user.barbershopId!)
+          .eq('role', 'barber'),
+
+        // Agendamentos de hoje para calcular stats
+        supabase.from('bookings')
+          .select('barber_id, service_price, status')
+          .eq('barbershop_id', user.barbershopId!)
+          .eq('date', todayISO),
+      ])
+
+      if (shopRes.data) setCode(shopRes.data.invite_code)
+
+      const members = membersRes.data ?? []
+      const bookings = bookingsRes.data ?? []
+
+      const mapped: TeamMember[] = members.map(m => {
+        const myBookings = bookings.filter(b => b.barber_id === m.id)
+        return {
+          id:                m.id,
+          name:              m.name,
+          specialty:         m.specialty  ?? 'Barbeiro',
+          rating:            4.9,
+          avatar:            m.avatar     ?? m.name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase(),
+          active:            true,
+          phone:             m.phone      ?? '',
+          appointmentsToday: myBookings.length,
+          revenueToday:      myBookings
+            .filter(b => b.status === 'done')
+            .reduce((s, b) => s + Number(b.service_price), 0),
+        }
+      })
+
+      setTeam(mapped)
+      setLoading(false)
+    }
+
+    load()
+  }, [user.barbershopId, todayISO])
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(inviteCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const toggleActive = (id: string) =>
     setTeam(p => p.map(m => m.id === id ? { ...m, active: !m.active } : m))
-
-  const addMember = () => {
-    if (!form.name) return
-    const member: TeamMember = {
-      id: Date.now().toString(),
-      name: form.name,
-      specialty: form.specialty || 'Corte Clássico',
-      rating: 5.0,
-      avatar: form.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase(),
-      active: true,
-      appointmentsToday: 0,
-      revenueToday: 0,
-      phone: form.phone,
-    }
-    setTeam(p => [member, ...p])
-    setForm({ name: '', specialty: '', phone: '' })
-    setInvite(false)
-  }
 
   const active   = team.filter(m => m.active)
   const inactive = team.filter(m => !m.active)
@@ -93,12 +117,41 @@ export function AdminEquipeView() {
         </motion.button>
       </div>
 
+      {/* Código de convite */}
+      {inviteCode && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl p-4 flex items-center justify-between gap-4"
+          style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.2)' }}>
+          <div>
+            <p style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(212,175,55,0.6)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px' }}>
+              Código de Convite
+            </p>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
+              Compartilhe com seus barbeiros — eles inserem ao se cadastrar.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span style={{
+              fontFamily: 'monospace', fontSize: '22px', fontWeight: 700,
+              color: '#D4AF37', letterSpacing: '0.2em',
+            }}>{inviteCode}</span>
+            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+              onClick={copyCode}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+              style={{ background: copied ? 'rgba(74,222,128,0.1)' : 'rgba(212,175,55,0.1)', color: copied ? '#4ade80' : '#D4AF37', border: `1px solid ${copied ? 'rgba(74,222,128,0.25)' : 'rgba(212,175,55,0.25)'}` }}>
+              {copied ? <CheckCheck size={12} /> : <Copy size={12} />}
+              {copied ? 'Copiado!' : 'Copiar'}
+            </motion.button>
+          </div>
+        </motion.div>
+      )}
+
       {/* KPIs rápidos */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { icon: Users,      label: 'Ativos hoje',     value: `${active.length}`,        color: '#D4AF37' },
-          { icon: Clock,      label: 'Atendimentos',    value: `${totalApt}`,             color: '#60a5fa' },
-          { icon: TrendingUp, label: 'Faturado hoje',   value: `R$ ${totalRev.toLocaleString('pt-BR')}`, color: '#4ade80' },
+          { icon: Users,      label: 'Ativos hoje',   value: `${active.length}`,                           color: '#D4AF37' },
+          { icon: Clock,      label: 'Atendimentos',  value: `${totalApt}`,                                color: '#60a5fa' },
+          { icon: TrendingUp, label: 'Faturado hoje', value: `R$ ${totalRev.toLocaleString('pt-BR')}`,     color: '#4ade80' },
         ].map((k, i) => {
           const Icon = k.icon
           return (
@@ -120,62 +173,75 @@ export function AdminEquipeView() {
         })}
       </div>
 
-      {/* Cards dos barbeiros */}
-      <div>
-        <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
-          Ativos
+      {/* Estado vazio */}
+      {!loading && team.length === 0 && (
+        <div className="rounded-2xl p-8 text-center"
+          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <Scissors size={28} style={{ color: 'rgba(212,175,55,0.3)', margin: '0 auto 12px' }} />
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 500 }}>Nenhum barbeiro ainda</p>
+          <p style={{ color: 'rgba(113,113,122,0.5)', fontSize: '12px', marginTop: '4px' }}>
+            Compartilhe o código <strong style={{ color: '#D4AF37' }}>{inviteCode}</strong> para que eles se cadastrem.
+          </p>
         </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          <AnimatePresence>
-            {active.map((m, i) => (
-              <motion.div key={m.id}
-                initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ delay: i * 0.08 }}
-                className="rounded-2xl p-5"
-                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', transition: 'border-color 0.2s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(212,175,55,0.2)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.06)' }}>
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-[13px] font-bold"
-                      style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.2)' }}>
-                      {m.avatar}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>{m.name}</div>
-                      <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)', marginTop: '2px' }}>
-                        <Scissors size={9} style={{ display: 'inline', marginRight: '4px' }} />{m.specialty}
+      )}
+
+      {/* Cards dos barbeiros ativos */}
+      {active.length > 0 && (
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+            Ativos
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <AnimatePresence>
+              {active.map((m, i) => (
+                <motion.div key={m.id}
+                  initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: i * 0.08 }}
+                  className="rounded-2xl p-5"
+                  style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(212,175,55,0.2)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.06)' }}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center text-[13px] font-bold"
+                        style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.2)' }}>
+                        {m.avatar}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>{m.name}</div>
+                        <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)', marginTop: '2px' }}>
+                          <Scissors size={9} style={{ display: 'inline', marginRight: '4px' }} />{m.specialty}
+                        </div>
                       </div>
                     </div>
+                    <button onClick={() => toggleActive(m.id)}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all"
+                      style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', color: '#4ade80' }}
+                      onMouseEnter={e => { const b = e.currentTarget; b.style.background = 'rgba(239,68,68,0.08)'; b.style.borderColor = 'rgba(239,68,68,0.2)'; b.style.color = '#f87171'; b.textContent = 'Desativar' }}
+                      onMouseLeave={e => { const b = e.currentTarget; b.style.background = 'rgba(74,222,128,0.08)'; b.style.borderColor = 'rgba(74,222,128,0.2)'; b.style.color = '#4ade80'; b.textContent = 'Ativo' }}>
+                      Ativo
+                    </button>
                   </div>
-                  <button onClick={() => toggleActive(m.id)}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all"
-                    style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', color: '#4ade80' }}
-                    onMouseEnter={e => { const b = e.currentTarget; b.style.background = 'rgba(239,68,68,0.08)'; b.style.borderColor = 'rgba(239,68,68,0.2)'; b.style.color = '#f87171'; b.textContent = 'Desativar' }}
-                    onMouseLeave={e => { const b = e.currentTarget; b.style.background = 'rgba(74,222,128,0.08)'; b.style.borderColor = 'rgba(74,222,128,0.2)'; b.style.color = '#4ade80'; b.textContent = 'Ativo' }}>
-                    Ativo
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: 'Atendimentos', value: `${m.appointmentsToday}` },
-                    { label: 'Faturado hoje', value: `R$ ${m.revenueToday}` },
-                    { label: 'Avaliação', value: `★ ${m.rating}` },
-                  ].map((stat, j) => (
-                    <div key={j} className="rounded-xl p-2.5 text-center"
-                      style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                      <div style={{ fontWeight: 700, color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>{stat.value}</div>
-                      <div style={{ fontSize: '9px', color: 'rgba(113,113,122,0.5)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'Atendimentos', value: `${m.appointmentsToday}` },
+                      { label: 'Faturado hoje', value: `R$ ${m.revenueToday}` },
+                      { label: 'Avaliação',     value: `★ ${m.rating}` },
+                    ].map((stat, j) => (
+                      <div key={j} className="rounded-xl p-2.5 text-center"
+                        style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                        <div style={{ fontWeight: 700, color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>{stat.value}</div>
+                        <div style={{ fontSize: '9px', color: 'rgba(113,113,122,0.5)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Inativos */}
       {inactive.length > 0 && (
@@ -237,39 +303,31 @@ export function AdminEquipeView() {
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {[
-                  { label: 'Nome completo', key: 'name', placeholder: 'Ex: Lucas Ferreira' },
-                  { label: 'Especialidade', key: 'specialty', placeholder: 'Ex: Degradê & Barba' },
-                  { label: 'Telefone / WhatsApp', key: 'phone', placeholder: '(11) 9 9999-0000' },
-                ].map(f => (
-                  <div key={f.key}>
-                    <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      {f.label}
-                    </label>
-                    <input
-                      value={(form as Record<string, string>)[f.key]}
-                      onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                      placeholder={f.placeholder}
-                      className="w-full mt-1 px-3 py-2.5 rounded-xl outline-none text-sm"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }} />
-                  </div>
-                ))}
-              </div>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '16px', lineHeight: 1.6 }}>
+                Compartilhe o código abaixo com o barbeiro. Ele insere esse código ao se cadastrar no app.
+              </p>
 
-              <div className="flex gap-2 mt-5">
-                <button onClick={() => setInvite(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}>
-                  Cancelar
-                </button>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={addMember}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-black"
-                  style={{ background: 'linear-gradient(135deg,#B8951F,#D4AF37)' }}>
-                  <Check size={14} /> Adicionar
-                </motion.button>
-              </div>
+              {inviteCode && (
+                <div className="flex items-center justify-between rounded-xl px-4 py-3 mb-4"
+                  style={{ background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.22)' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '26px', fontWeight: 700, color: '#D4AF37', letterSpacing: '0.25em' }}>
+                    {inviteCode}
+                  </span>
+                  <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                    onClick={copyCode}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                    style={{ background: copied ? 'rgba(74,222,128,0.1)' : 'rgba(212,175,55,0.1)', color: copied ? '#4ade80' : '#D4AF37' }}>
+                    {copied ? <CheckCheck size={13} /> : <Copy size={13} />}
+                    {copied ? 'Copiado!' : 'Copiar'}
+                  </motion.button>
+                </div>
+              )}
+
+              <button onClick={() => setInvite(false)}
+                className="w-full py-2.5 rounded-xl text-sm font-medium"
+                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}>
+                Fechar
+              </button>
             </motion.div>
           </motion.div>
         )}
