@@ -1,36 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, ArrowUpRight, Download, Users, DollarSign, Activity } from 'lucide-react'
-import { REVENUE_DATA } from '../../data/mock'
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Download, Users, DollarSign, Activity } from 'lucide-react'
+import type { AppUser } from '../../types'
+import { supabase } from '../../lib/supabase'
 
-// ── Dados mockados para relatórios ─────────────────────────────
-const MONTHLY_DATA = [
-  { day: 'Jan', value: 18400 },
-  { day: 'Fev', value: 21200 },
-  { day: 'Mar', value: 19800 },
-  { day: 'Abr', value: 24600 },
-  { day: 'Mai', value: 28650 },
-  { day: 'Jun', value: 0     },
-]
+interface AdminRelatoriosViewProps {
+  user: AppUser
+}
 
-const TOP_BARBERS = [
-  { name: 'Carlos Motta',      avatar: 'CM', revenue: 9840,  clients: 82, avg: 120, rating: 4.9 },
-  { name: 'Diego Alves',       avatar: 'DA', revenue: 7200,  clients: 60, avg: 120, rating: 4.8 },
-  { name: 'Vinicius Ferreira', avatar: 'VF', revenue: 11610, clients: 97, avg: 120, rating: 4.9 },
-]
-
-const SERVICE_DIST = [
-  { name: 'Corte + Barba',       pct: 38, revenue: 'R$ 10.887', color: '#D4AF37'         },
-  { name: 'Corte Clássico',      pct: 27, revenue: 'R$ 7.736',  color: 'rgba(212,175,55,0.6)' },
-  { name: 'Barba Completa',      pct: 18, revenue: 'R$ 5.157',  color: 'rgba(212,175,55,0.35)'},
-  { name: 'Tratamento Capilar',  pct: 11, revenue: 'R$ 3.152',  color: 'rgba(212,175,55,0.2)' },
-  { name: 'Sobrancelha + Barba', pct:  6, revenue: 'R$ 1.719',  color: 'rgba(212,175,55,0.12)'},
-]
+type ChartPoint = { day: string; value: number }
+type TopBarber  = { name: string; avatar: string; revenue: number; clients: number }
+type SvcDist    = { name: string; pct: number; revenue: number; color: string }
 
 type Period = 'semana' | 'mes'
 
+const iso = (d: Date) => d.toISOString().split('T')[0]
+const DAYS_PT   = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const MONTHS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+const DIST_COLORS = [
+  '#D4AF37',
+  'rgba(212,175,55,0.6)',
+  'rgba(212,175,55,0.35)',
+  'rgba(212,175,55,0.2)',
+  'rgba(212,175,55,0.12)',
+]
+
 interface MiniBarChartProps {
-  data: { day: string; value: number }[]
+  data: ChartPoint[]
   height?: number
 }
 
@@ -75,16 +72,163 @@ function MiniBarChart({ data, height = 110 }: MiniBarChartProps) {
   )
 }
 
-export function AdminRelatoriosView() {
-  const [period, setPeriod] = useState<Period>('semana')
-  const chartData = period === 'semana' ? REVENUE_DATA : MONTHLY_DATA
+// Delta % vs período anterior; null quando não há base de comparação
+const delta = (curr: number, prev: number): number | null =>
+  prev > 0 ? Math.round(((curr - prev) / prev) * 1000) / 10 : null
 
-  const totalWeek  = REVENUE_DATA.reduce((a, b) => a + b.value, 0)
-  const totalMonth = 28650
-  const prevWeek   = 10650
-  const prevMonth  = 24100
-  const growthWeek  = (((totalWeek  - prevWeek)  / prevWeek)  * 100).toFixed(1)
-  const growthMonth = (((totalMonth - prevMonth) / prevMonth) * 100).toFixed(1)
+export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
+  const [period, setPeriod]         = useState<Period>('semana')
+  const [loading, setLoading]       = useState(true)
+  const [weekChart, setWeekChart]   = useState<ChartPoint[]>([])
+  const [monthChart, setMonthChart] = useState<ChartPoint[]>([])
+  const [totals, setTotals] = useState({
+    week: 0, prevWeek: 0,
+    month: 0, prevMonth: 0,
+    clientsMonth: 0, clientsPrevMonth: 0,
+    ticket: 0, prevTicket: 0,
+  })
+  const [topBarbers, setTopBarbers] = useState<TopBarber[]>([])
+  const [svcDist, setSvcDist]       = useState<SvcDist[]>([])
+
+  const now = new Date()
+  const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+
+  useEffect(() => {
+    if (!user.barbershopId) { setLoading(false); return }
+
+    const load = async () => {
+      // Janela única de 6 meses — tudo é agregado aqui no cliente
+      const start6m = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+
+      const [bookingsRes, barbersRes] = await Promise.all([
+        supabase.from('bookings')
+          .select('barber_id, client_id, service_name, service_price, date')
+          .eq('barbershop_id', user.barbershopId!)
+          .eq('status', 'done')
+          .gte('date', iso(start6m)),
+        supabase.from('profiles')
+          .select('id, name, avatar')
+          .eq('barbershop_id', user.barbershopId!)
+          .eq('role', 'barber'),
+      ])
+
+      const rows = (bookingsRes.data ?? []).map(b => ({
+        barberId: b.barber_id as string,
+        clientId: b.client_id as string | null,
+        service:  b.service_name as string,
+        price:    Number(b.service_price),
+        date:     b.date as string,
+      }))
+      const barberNames = new Map(
+        (barbersRes.data ?? []).map(b => [b.id, { name: b.name as string, avatar: (b.avatar ?? '—') as string }])
+      )
+
+      // ── Janelas de tempo ──────────────────────────────────────
+      const todayStr    = iso(new Date())
+      const d7          = new Date(); d7.setDate(d7.getDate() - 6)
+      const last7Start  = iso(d7)
+      const dp          = new Date(); dp.setDate(dp.getDate() - 13)
+      const prev7Start  = iso(dp)
+      const prev7End    = iso(new Date(d7.getTime() - 86400000))
+
+      const monthStart      = iso(new Date(now.getFullYear(), now.getMonth(), 1))
+      const prevMonthStart  = iso(new Date(now.getFullYear(), now.getMonth() - 1, 1))
+      const prevMonthEnd    = iso(new Date(now.getFullYear(), now.getMonth(), 0))
+
+      const inRange = (d: string, a: string, b: string) => d >= a && d <= b
+      const sum = (list: typeof rows) => list.reduce((s, r) => s + r.price, 0)
+
+      const weekRows      = rows.filter(r => inRange(r.date, last7Start, todayStr))
+      const prevWeekRows  = rows.filter(r => inRange(r.date, prev7Start, prev7End))
+      const monthRows     = rows.filter(r => r.date >= monthStart)
+      const prevMonthRows = rows.filter(r => inRange(r.date, prevMonthStart, prevMonthEnd))
+
+      const distinct = (list: typeof rows) =>
+        new Set(list.filter(r => r.clientId).map(r => r.clientId)).size
+
+      setTotals({
+        week:             sum(weekRows),
+        prevWeek:         sum(prevWeekRows),
+        month:            sum(monthRows),
+        prevMonth:        sum(prevMonthRows),
+        clientsMonth:     distinct(monthRows),
+        clientsPrevMonth: distinct(prevMonthRows),
+        ticket:           monthRows.length     > 0 ? Math.round(sum(monthRows)     / monthRows.length)     : 0,
+        prevTicket:       prevMonthRows.length > 0 ? Math.round(sum(prevMonthRows) / prevMonthRows.length) : 0,
+      })
+
+      // ── Gráfico semana (últimos 7 dias) ───────────────────────
+      const wk: ChartPoint[] = []
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i)
+        const dISO = iso(d)
+        wk.push({ day: DAYS_PT[d.getDay()], value: sum(rows.filter(r => r.date === dISO)) })
+      }
+      setWeekChart(wk)
+
+      // ── Gráfico mês (últimos 6 meses) ─────────────────────────
+      const mo: ChartPoint[] = []
+      for (let i = 5; i >= 0; i--) {
+        const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const mEnd   = new Date(now.getFullYear(), now.getMonth() - i + 1, 0)
+        mo.push({
+          day:   MONTHS_PT[mStart.getMonth()],
+          value: sum(rows.filter(r => inRange(r.date, iso(mStart), iso(mEnd)))),
+        })
+      }
+      setMonthChart(mo)
+
+      // ── Top barbeiros (mês corrente) ──────────────────────────
+      const byBarber = new Map<string, { revenue: number; clients: number }>()
+      monthRows.forEach(r => {
+        const cur = byBarber.get(r.barberId) ?? { revenue: 0, clients: 0 }
+        byBarber.set(r.barberId, { revenue: cur.revenue + r.price, clients: cur.clients + 1 })
+      })
+      setTopBarbers(
+        [...byBarber.entries()]
+          .map(([id, v]) => ({
+            name:    barberNames.get(id)?.name   ?? 'Barbeiro',
+            avatar:  barberNames.get(id)?.avatar ?? '—',
+            revenue: v.revenue,
+            clients: v.clients,
+          }))
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 5)
+      )
+
+      // ── Distribuição de serviços (mês corrente) ───────────────
+      const bySvc = new Map<string, number>()
+      monthRows.forEach(r => bySvc.set(r.service, (bySvc.get(r.service) ?? 0) + r.price))
+      const totalSvc = [...bySvc.values()].reduce((s, v) => s + v, 0) || 1
+      setSvcDist(
+        [...bySvc.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([name, rev], i) => ({
+            name,
+            revenue: rev,
+            pct:     Math.round((rev / totalSvc) * 100),
+            color:   DIST_COLORS[i],
+          }))
+      )
+
+      setLoading(false)
+    }
+
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.barbershopId])
+
+  const chartData  = period === 'semana' ? weekChart : monthChart
+  const chartTotal = period === 'semana' ? totals.week : totals.month
+  const chartDelta = period === 'semana' ? delta(totals.week, totals.prevWeek) : delta(totals.month, totals.prevMonth)
+
+  const kpis = [
+    { icon: DollarSign, label: 'Faturamento semana', value: `R$ ${totals.week.toLocaleString('pt-BR')}`,  d: delta(totals.week, totals.prevWeek) },
+    { icon: TrendingUp, label: 'Faturamento mês',    value: `R$ ${totals.month.toLocaleString('pt-BR')}`, d: delta(totals.month, totals.prevMonth) },
+    { icon: Users,      label: 'Clientes no mês',    value: `${totals.clientsMonth}`,                      d: delta(totals.clientsMonth, totals.clientsPrevMonth) },
+    { icon: Activity,   label: 'Ticket médio',        value: `R$ ${totals.ticket.toLocaleString('pt-BR')}`, d: delta(totals.ticket, totals.prevTicket) },
+  ]
 
   return (
     <div className="space-y-6">
@@ -95,26 +239,23 @@ export function AdminRelatoriosView() {
             Relatórios
           </h1>
           <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
-            Visão geral de desempenho — maio 2025
+            Visão geral de desempenho — {monthLabel}
           </p>
         </div>
         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => window.print()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.7)' }}>
-          <Download size={13} /> Exportar PDF
+          <Download size={13} /> Exportar / Imprimir
         </motion.button>
       </div>
 
       {/* KPIs de comparativo */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { icon: DollarSign,  label: 'Faturamento semana',  value: `R$ ${totalWeek.toLocaleString('pt-BR')}`,   growth: growthWeek,  positive: true  },
-          { icon: TrendingUp,  label: 'Faturamento mês',     value: `R$ ${totalMonth.toLocaleString('pt-BR')}`,  growth: growthMonth, positive: true  },
-          { icon: Users,       label: 'Novos clientes/mês',  value: '14',                                         growth: '16.7',      positive: true  },
-          { icon: Activity,    label: 'Ticket médio',         value: 'R$ 92',                                     growth: '-3.2',      positive: false },
-        ].map((k, i) => {
-          const Icon = k.icon
-          const G    = k.positive ? TrendingUp : TrendingDown
+        {kpis.map((k, i) => {
+          const Icon     = k.icon
+          const positive = (k.d ?? 0) >= 0
+          const G        = positive ? TrendingUp : TrendingDown
           return (
             <motion.div key={i}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
@@ -126,13 +267,15 @@ export function AdminRelatoriosView() {
                   style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.18)' }}>
                   <Icon size={14} style={{ color: '#D4AF37' }} />
                 </div>
-                <div className={`flex items-center gap-1 text-[10px] font-semibold`}
-                  style={{ color: k.positive ? '#4ade80' : '#f87171' }}>
-                  <G size={10} />{k.positive ? '+' : ''}{k.growth}%
-                </div>
+                {k.d !== null && (
+                  <div className="flex items-center gap-1 text-[10px] font-semibold"
+                    style={{ color: positive ? '#4ade80' : '#f87171' }}>
+                    <G size={10} />{positive ? '+' : ''}{k.d}%
+                  </div>
+                )}
               </div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: 700, color: 'white', lineHeight: 1 }}>
-                {k.value}
+                {loading ? '—' : k.value}
               </div>
               <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '4px' }}>{k.label}</div>
             </motion.div>
@@ -147,7 +290,7 @@ export function AdminRelatoriosView() {
           <div>
             <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px' }}>Receita por Período</h3>
             <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '12px', marginTop: '2px' }}>
-              {period === 'semana' ? `Total: R$ ${totalWeek.toLocaleString('pt-BR')}` : `Total: R$ ${totalMonth.toLocaleString('pt-BR')}`}
+              {loading ? '—' : `Total: R$ ${chartTotal.toLocaleString('pt-BR')}`}
             </p>
           </div>
           <div className="flex gap-1">
@@ -159,16 +302,19 @@ export function AdminRelatoriosView() {
                   border: `1px solid ${period === p ? 'rgba(212,175,55,0.3)' : 'rgba(255,255,255,0.07)'}`,
                   color:  period === p ? '#D4AF37' : 'rgba(113,113,122,0.6)',
                 }}>
-                {p === 'semana' ? 'Semana' : 'Mês'}
+                {p === 'semana' ? 'Semana' : '6 Meses'}
               </button>
             ))}
           </div>
         </div>
-        <MiniBarChart data={chartData} height={140} />
-        <div className="flex items-center justify-end gap-1.5 mt-3" style={{ fontSize: '11px', color: '#4ade80' }}>
-          <ArrowUpRight size={12} />
-          {period === 'semana' ? `+${growthWeek}%` : `+${growthMonth}%`} vs período anterior
-        </div>
+        {chartData.length > 0 && <MiniBarChart data={chartData} height={140} />}
+        {chartDelta !== null && (
+          <div className="flex items-center justify-end gap-1.5 mt-3"
+            style={{ fontSize: '11px', color: chartDelta >= 0 ? '#4ade80' : '#f87171' }}>
+            {chartDelta >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+            {chartDelta >= 0 ? '+' : ''}{chartDelta}% vs período anterior
+          </div>
+        )}
       </div>
 
       {/* Top Barbeiros + Distribuição de Serviços */}
@@ -179,8 +325,13 @@ export function AdminRelatoriosView() {
           <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px', marginBottom: '16px' }}>
             Top Barbeiros — Mês
           </h3>
+          {!loading && topBarbers.length === 0 && (
+            <p className="text-center py-4" style={{ color: 'rgba(113,113,122,0.45)', fontSize: '12px' }}>
+              Nenhum atendimento concluído este mês.
+            </p>
+          )}
           <div className="space-y-4">
-            {TOP_BARBERS.sort((a, b) => b.revenue - a.revenue).map((b, i) => (
+            {topBarbers.map((b, i) => (
               <motion.div key={b.name}
                 initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.1 }}
@@ -195,7 +346,7 @@ export function AdminRelatoriosView() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }} className="truncate">{b.name}</div>
-                  <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)' }}>{b.clients} clientes · ★ {b.rating}</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)' }}>{b.clients} atendimento{b.clients !== 1 ? 's' : ''}</div>
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', fontFamily: 'monospace', flexShrink: 0 }}>
                   R$ {b.revenue.toLocaleString('pt-BR')}
@@ -211,9 +362,14 @@ export function AdminRelatoriosView() {
           <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px', marginBottom: '16px' }}>
             Distribuição de Serviços
           </h3>
+          {!loading && svcDist.length === 0 && (
+            <p className="text-center py-4" style={{ color: 'rgba(113,113,122,0.45)', fontSize: '12px' }}>
+              Nenhum atendimento concluído este mês.
+            </p>
+          )}
           <div className="space-y-3">
-            {SERVICE_DIST.map((s, i) => (
-              <motion.div key={i}
+            {svcDist.map((s, i) => (
+              <motion.div key={s.name}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.08 }}>
                 <div className="flex items-center justify-between mb-1.5">
@@ -222,7 +378,9 @@ export function AdminRelatoriosView() {
                     <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.72)' }}>{s.name}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', fontFamily: 'monospace' }}>{s.revenue}</span>
+                    <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', fontFamily: 'monospace' }}>
+                      R$ {s.revenue.toLocaleString('pt-BR')}
+                    </span>
                     <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(212,175,55,0.7)', minWidth: '28px', textAlign: 'right' }}>
                       {s.pct}%
                     </span>
@@ -243,7 +401,7 @@ export function AdminRelatoriosView() {
             style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.55)' }}>Total faturado no mês</span>
             <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 700, color: '#D4AF37' }}>
-              R$ 28.651
+              R$ {totals.month.toLocaleString('pt-BR')}
             </span>
           </div>
         </div>

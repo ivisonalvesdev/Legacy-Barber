@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import type { AppUser } from '../../types'
-import { INVENTORY } from '../../data/mock'
 import { supabase } from '../../lib/supabase'
 import { TiltCard } from '../ui/TiltCard'
 
@@ -20,11 +19,8 @@ type AgendaItem = {
 }
 
 export function BarberView({ user }: BarberViewProps) {
-  const [inv,    setInv]    = useState(INVENTORY)
   const [agenda, setAgenda] = useState<AgendaItem[]>([])
   const [stats,  setStats]  = useState({ count: 0, revenue: 0 })
-
-  const use1 = (id: number) => setInv(p => p.map(i => i.id === id ? { ...i, stock: Math.max(0, i.stock - 1) } : i))
 
   const today    = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   const hour     = new Date().getHours()
@@ -34,16 +30,21 @@ export function BarberView({ user }: BarberViewProps) {
     const todayISO = new Date().toISOString().split('T')[0]
     supabase
       .from('bookings')
-      .select('id, time, service_name, service_price, status, client:profiles!bookings_client_id_fkey(name)')
+      .select('id, time, service_name, service_price, status, client_name, client:profiles!bookings_client_id_fkey(name)')
       .eq('barber_id', user.id)
       .eq('date', todayISO)
+      .neq('status', 'cancelled')
       .order('time')
       .then(({ data }) => {
         if (!data) return
-        const items: AgendaItem[] = data.map((b: any) => ({
+        type Row = {
+          id: string; time: string; service_name: string; service_price: number | string
+          status: string; client_name: string | null; client: { name: string } | null
+        }
+        const items: AgendaItem[] = (data as unknown as Row[]).map(b => ({
           id:      b.id,
           time:    b.time,
-          client:  b.client?.name ?? 'Cliente',
+          client:  b.client?.name ?? b.client_name ?? 'Cliente',
           service: b.service_name,
           price:   Number(b.service_price),
           status:  b.status as AgendaItem['status'],
@@ -167,43 +168,6 @@ export function BarberView({ user }: BarberViewProps) {
               </div>
             </motion.div>
           ))}
-        </div>
-      </div>
-
-      {/* Insumos */}
-      <div>
-        <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: 700, color: 'white', marginBottom: '16px' }}>
-          Baixa Rápida de Insumo
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {inv.map((item, idx) => {
-            const pct = (item.stock / item.max) * 100
-            const barColor = pct <= 25 ? '#ef4444' : pct <= 50 ? '#f59e0b' : '#D4AF37'
-            return (
-              <motion.div key={item.id}
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                whileHover={{ y: -2 }}
-                className="rounded-xl p-4"
-                style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ fontSize: '10px', color: 'rgba(113,113,122,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{item.category}</div>
-                <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.88)', fontSize: '13px', marginBottom: '10px', lineHeight: 1.3 }}>{item.name}</div>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span style={{ fontSize: '20px', fontWeight: 700, color: pct <= 25 ? '#f87171' : '#D4AF37' }}>{item.stock}</span>
-                  <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)' }}>/ {item.max} {item.unit}</span>
-                </div>
-                <div className="rounded-full overflow-hidden mb-3" style={{ height: '4px', background: 'rgba(255,255,255,0.06)' }}>
-                  <div style={{ width: `${pct}%`, height: '100%', borderRadius: '9999px', background: barColor }} />
-                </div>
-                <button onClick={() => use1(item.id)}
-                  className="w-full py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
-                  style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(113,113,122,0.65)' }}
-                  onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(239,68,68,0.42)'; b.style.color = '#f87171'; b.style.background = 'rgba(239,68,68,0.06)' }}
-                  onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.07)'; b.style.color = 'rgba(113,113,122,0.65)'; b.style.background = 'transparent' }}>
-                  Usar 1 unidade
-                </button>
-              </motion.div>
-            )
-          })}
         </div>
       </div>
     </div>

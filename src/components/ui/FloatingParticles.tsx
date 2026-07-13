@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { PARTICLES } from '../../data/mock'
+import { PARTICLES } from '../../data/landing'
 
 export function FloatingParticles() {
   return (

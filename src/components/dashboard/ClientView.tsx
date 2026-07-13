@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Clock, Star, Check, ChevronLeft, ChevronRight, CheckCircle, BadgeCheck, Scissors } from 'lucide-react'
-import type { AppUser } from '../../types'
-import { SERVICES, TIME_SLOTS } from '../../data/mock'
+import type { AppUser, Service } from '../../types'
+import { TIME_SLOTS, DEFAULT_SERVICES } from '../../data/defaults'
 import { supabase } from '../../lib/supabase'
 
 interface ClientViewProps {
@@ -103,50 +103,111 @@ function ConfettiRain() {
   )
 }
 
+const todayISO = () => new Date().toISOString().split('T')[0]
+
 export function ClientView({ user }: ClientViewProps) {
-  const [step, setStep]           = useState<1 | 2 | 3 | 4>(1)
-  const [selService, setSelService] = useState<typeof SERVICES[0] | null>(null)
+  const [step, setStep]             = useState<1 | 2 | 3 | 4>(1)
   const [selBarber,  setSelBarber]  = useState<Barber | null>(null)
+  const [selService, setSelService] = useState<Service | null>(null)
   const [barbers,    setBarbers]    = useState<Barber[]>([])
+  const [services,   setServices]   = useState<Service[]>([])
+  const [svcLoading, setSvcLoading] = useState(false)
+  const [taken,      setTaken]      = useState<Set<string>>(new Set())
   const [saving,     setSaving]     = useState(false)
   const [bookingErr, setBookingErr] = useState('')
   const [selTime,    setSelTime]    = useState<string | null>(null)
-  const [selDate,    setSelDate]    = useState(() => new Date().toISOString().split('T')[0])
+  const [selDate,    setSelDate]    = useState(todayISO)
   const [confirmed,  setConfirmed]  = useState(false)
 
   const canNext =
-    (step === 1 && !!selService) ||
-    (step === 2 && !!selBarber)  ||
+    (step === 1 && !!selBarber)  ||
+    (step === 2 && !!selService) ||
     (step === 3 && !!selDate && !!selTime)
 
   const prev  = () => step > 1 && setStep((step - 1) as 1 | 2 | 3 | 4)
   const next  = () => canNext && setStep((step + 1) as 2 | 3 | 4)
-  const reset = () => { setConfirmed(false); setStep(1); setSelService(null); setSelBarber(null); setSelTime(null) }
+  const reset = () => {
+    setConfirmed(false); setStep(1)
+    setSelBarber(null); setSelService(null); setSelTime(null)
+    setBookingErr('')
+  }
 
   const STEPS = [
-    { n: 1, label: 'Serviço'      },
-    { n: 2, label: 'Profissional' },
+    { n: 1, label: 'Profissional' },
+    { n: 2, label: 'Serviço'      },
     { n: 3, label: 'Data & Hora'  },
     { n: 4, label: 'Confirmação'  },
   ]
 
-  // Busca barbeiros reais do banco (incluindo barbershop_id para o insert)
+  // ── Barbeiros reais do banco ─────────────────────────────────
   useEffect(() => {
-    supabase.from('profiles').select('id,name,specialty,avatar,barbershop_id').eq('role', 'barber')
+    supabase.from('profiles')
+      .select('id,name,specialty,avatar,barbershop_id,active')
+      .eq('role', 'barber')
       .then(({ data }) => {
         if (data) setBarbers(data.map(b => ({
           id:           b.id,
           name:         b.name,
           specialty:    b.specialty ?? 'Barbeiro',
           avatar:       b.avatar ?? b.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase(),
-          available:    true,
+          available:    b.active ?? true,
           rating:       4.9,
           barbershopId: b.barbershop_id ?? null,
         })))
       })
   }, [])
 
-  // Salva agendamento no Supabase
+  // ── Catálogo de serviços da barbearia do barbeiro escolhido ──
+  useEffect(() => {
+    if (!selBarber) { setServices([]); return }
+    if (!selBarber.barbershopId) { setServices(DEFAULT_SERVICES); return }
+
+    setSvcLoading(true)
+    supabase.from('services')
+      .select('id, name, duration_min, price, emoji, popular')
+      .eq('barbershop_id', selBarber.barbershopId)
+      .eq('active', true)
+      .order('price')
+      .then(({ data, error }) => {
+        setSvcLoading(false)
+        // Fallback: tabela ainda não criada ou catálogo vazio → serviços padrão
+        if (error || !data || data.length === 0) {
+          setServices(DEFAULT_SERVICES)
+          return
+        }
+        setServices(data.map(s => ({
+          id:          s.id,
+          name:        s.name,
+          durationMin: s.duration_min,
+          price:       Number(s.price),
+          emoji:       s.emoji,
+          popular:     s.popular,
+        })))
+      })
+  }, [selBarber])
+
+  // ── Horários já ocupados do barbeiro na data escolhida ───────
+  useEffect(() => {
+    if (!selBarber || !selDate) { setTaken(new Set()); return }
+    supabase.from('bookings')
+      .select('time')
+      .eq('barber_id', selBarber.id)
+      .eq('date', selDate)
+      .neq('status', 'cancelled')
+      .then(({ data }) => {
+        setTaken(new Set((data ?? []).map(b => b.time)))
+      })
+  }, [selBarber, selDate])
+
+  // Horários no passado (quando a data é hoje) também ficam bloqueados
+  const isPastSlot = (t: string) => {
+    if (selDate !== todayISO()) return false
+    const [h, m] = t.split(':').map(Number)
+    const now = new Date()
+    return h * 60 + m <= now.getHours() * 60 + now.getMinutes()
+  }
+
+  // ── Salva agendamento no Supabase ────────────────────────────
   const handleConfirm = async () => {
     if (!selService || !selBarber || !selTime) return
     setSaving(true)
@@ -162,8 +223,19 @@ export function ClientView({ user }: ClientViewProps) {
       status:        'upcoming',
     })
     setSaving(false)
-    if (error) setBookingErr('Erro ao salvar agendamento. Tente novamente.')
-    else       setConfirmed(true)
+    if (error) {
+      // 23505 = violação do índice único (slot acabou de ser ocupado)
+      if (error.code === '23505') {
+        setBookingErr('Esse horário acabou de ser reservado por outro cliente. Escolha outro.')
+        setTaken(prev => new Set(prev).add(selTime))
+        setSelTime(null)
+        setStep(3)
+      } else {
+        setBookingErr('Erro ao salvar agendamento. Tente novamente.')
+      }
+    } else {
+      setConfirmed(true)
+    }
   }
 
   if (confirmed) return (
@@ -264,43 +336,6 @@ export function ClientView({ user }: ClientViewProps) {
         {step === 1 && (
           <motion.div key="s1" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.28 }}>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontWeight: 700, color: 'white', marginBottom: '20px' }}>
-              Qual serviço você deseja?
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {SERVICES.map((sv, idx) => {
-                const sel = selService?.id === sv.id
-                return (
-                  <motion.button key={sv.id}
-                    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.06 }}
-                    whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelService(sv)}
-                    className="relative text-left rounded-2xl p-5 transition-all duration-200"
-                    style={{
-                      background: sel ? 'rgba(212,175,55,0.08)' : 'rgba(255,255,255,0.022)',
-                      border: `1px solid ${sel ? 'rgba(212,175,55,0.42)' : 'rgba(255,255,255,0.06)'}`,
-                      boxShadow: sel ? '0 0 35px rgba(212,175,55,0.12)' : 'none',
-                    }}>
-                    {sv.popular && (
-                      <div style={{ position: 'absolute', top: 10, right: 10, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(212,175,55,0.14)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.22)' }}>
-                        Popular
-                      </div>
-                    )}
-                    <div style={{ fontSize: '22px', marginBottom: '10px' }}>{sv.emoji}</div>
-                    <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '13px', marginBottom: '6px', lineHeight: 1.3 }}>{sv.name}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'rgba(113,113,122,0.7)', fontSize: '12px', marginBottom: '10px' }}>
-                      <Clock size={11} />{sv.duration}
-                    </div>
-                    <div style={{ color: sel ? '#D4AF37' : 'rgba(138,111,32,0.9)', fontWeight: 700, fontSize: '18px' }}>R$ {sv.price}</div>
-                  </motion.button>
-                )
-              })}
-            </div>
-          </motion.div>
-        )}
-
-        {step === 2 && (
-          <motion.div key="s2" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.28 }}>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontWeight: 700, color: 'white', marginBottom: '20px' }}>
               Escolha seu profissional
             </h2>
             <div className="space-y-3">
@@ -315,7 +350,11 @@ export function ClientView({ user }: ClientViewProps) {
                   <motion.button key={b.id}
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08 }}
                     whileHover={b.available ? { x: 4 } : {}}
-                    onClick={() => b.available && setSelBarber(b)}
+                    onClick={() => {
+                      if (!b.available) return
+                      if (selBarber?.id !== b.id) { setSelService(null); setSelTime(null) }
+                      setSelBarber(b)
+                    }}
                     className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200"
                     style={{
                       background: sel ? 'rgba(212,175,55,0.07)' : 'rgba(255,255,255,0.022)',
@@ -349,6 +388,46 @@ export function ClientView({ user }: ClientViewProps) {
           </motion.div>
         )}
 
+        {step === 2 && (
+          <motion.div key="s2" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.28 }}>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontWeight: 700, color: 'white', marginBottom: '20px' }}>
+              Qual serviço você deseja?
+            </h2>
+            {svcLoading && (
+              <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>Carregando catálogo…</p>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              {!svcLoading && services.map((sv, idx) => {
+                const sel = selService?.id === sv.id
+                return (
+                  <motion.button key={sv.id}
+                    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.06 }}
+                    whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
+                    onClick={() => setSelService(sv)}
+                    className="relative text-left rounded-2xl p-5 transition-all duration-200"
+                    style={{
+                      background: sel ? 'rgba(212,175,55,0.08)' : 'rgba(255,255,255,0.022)',
+                      border: `1px solid ${sel ? 'rgba(212,175,55,0.42)' : 'rgba(255,255,255,0.06)'}`,
+                      boxShadow: sel ? '0 0 35px rgba(212,175,55,0.12)' : 'none',
+                    }}>
+                    {sv.popular && (
+                      <div style={{ position: 'absolute', top: 10, right: 10, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(212,175,55,0.14)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.22)' }}>
+                        Popular
+                      </div>
+                    )}
+                    <div style={{ fontSize: '22px', marginBottom: '10px' }}>{sv.emoji}</div>
+                    <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '13px', marginBottom: '6px', lineHeight: 1.3 }}>{sv.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'rgba(113,113,122,0.7)', fontSize: '12px', marginBottom: '10px' }}>
+                      <Clock size={11} />{sv.durationMin}min
+                    </div>
+                    <div style={{ color: sel ? '#D4AF37' : 'rgba(138,111,32,0.9)', fontWeight: 700, fontSize: '18px' }}>R$ {sv.price}</div>
+                  </motion.button>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
+
         {step === 3 && (
           <motion.div key="s3" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.28 }}>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontWeight: 700, color: 'white', marginBottom: '20px' }}>
@@ -356,7 +435,8 @@ export function ClientView({ user }: ClientViewProps) {
             </h2>
             <div className="mb-6">
               <label style={{ fontSize: '11px', color: 'rgba(113,113,122,0.65)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '8px' }}>Data</label>
-              <input type="date" value={selDate} onChange={e => setSelDate(e.target.value)}
+              <input type="date" value={selDate} min={todayISO()}
+                onChange={e => { setSelDate(e.target.value); setSelTime(null) }}
                 className="w-full rounded-xl px-4 py-3 text-white text-sm outline-none"
                 style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', colorScheme: 'dark' }} />
             </div>
@@ -364,18 +444,22 @@ export function ClientView({ user }: ClientViewProps) {
               <label style={{ fontSize: '11px', color: 'rgba(113,113,122,0.65)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '12px' }}>Horário</label>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {TIME_SLOTS.map((t, idx) => {
-                  const sel = selTime === t
+                  const sel      = selTime === t
+                  const blocked  = taken.has(t) || isPastSlot(t)
                   return (
                     <motion.button key={t}
                       initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.035 }}
-                      whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                      onClick={() => setSelTime(t)}
+                      whileHover={blocked ? {} : { scale: 1.05 }} whileTap={blocked ? {} : { scale: 0.95 }}
+                      onClick={() => !blocked && setSelTime(t)}
+                      disabled={blocked}
                       className="py-2 rounded-lg font-mono text-xs font-semibold"
                       style={{
-                        background: sel ? '#D4AF37' : 'rgba(255,255,255,0.028)',
-                        color: sel ? '#000' : 'rgba(161,161,170,0.75)',
+                        background: sel ? '#D4AF37' : blocked ? 'rgba(255,255,255,0.012)' : 'rgba(255,255,255,0.028)',
+                        color: sel ? '#000' : blocked ? 'rgba(113,113,122,0.28)' : 'rgba(161,161,170,0.75)',
                         border: `1px solid ${sel ? '#D4AF37' : 'rgba(255,255,255,0.06)'}`,
                         boxShadow: sel ? '0 0 22px rgba(212,175,55,0.35)' : 'none',
+                        textDecoration: taken.has(t) ? 'line-through' : 'none',
+                        cursor: blocked ? 'not-allowed' : 'pointer',
                         transition: 'all 0.15s ease',
                       }}>
                       {t}
@@ -383,6 +467,11 @@ export function ClientView({ user }: ClientViewProps) {
                   )
                 })}
               </div>
+              {taken.size > 0 && (
+                <p style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '10px' }}>
+                  Horários riscados já estão reservados para {selBarber?.name.split(' ')[0]}.
+                </p>
+              )}
             </div>
           </motion.div>
         )}

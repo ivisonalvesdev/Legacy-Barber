@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Plus, X, Check, TrendingUp, Clock, Scissors, Copy, CheckCheck } from 'lucide-react'
+import { Users, Plus, X, TrendingUp, Clock, Scissors, Copy, CheckCheck } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
 
@@ -43,7 +43,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
 
         // Barbeiros desta barbearia
         supabase.from('profiles')
-          .select('id, name, specialty, avatar, phone')
+          .select('id, name, specialty, avatar, phone, active')
           .eq('barbershop_id', user.barbershopId!)
           .eq('role', 'barber'),
 
@@ -67,7 +67,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
           specialty:         m.specialty  ?? 'Barbeiro',
           rating:            4.9,
           avatar:            m.avatar     ?? m.name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase(),
-          active:            true,
+          active:            m.active     ?? true,
           phone:             m.phone      ?? '',
           appointmentsToday: myBookings.length,
           revenueToday:      myBookings
@@ -89,8 +89,16 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const toggleActive = (id: string) =>
-    setTeam(p => p.map(m => m.id === id ? { ...m, active: !m.active } : m))
+  // Persiste no banco — controla se o barbeiro aparece para os clientes
+  const toggleActive = async (id: string) => {
+    const member = team.find(m => m.id === id)
+    if (!member) return
+    const { error } = await supabase
+      .from('profiles')
+      .update({ active: !member.active })
+      .eq('id', id)
+    if (!error) setTeam(p => p.map(m => m.id === id ? { ...m, active: !m.active } : m))
+  }
 
   const active   = team.filter(m => m.active)
   const inactive = team.filter(m => !m.active)

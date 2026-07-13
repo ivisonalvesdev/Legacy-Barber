@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Star, Check } from 'lucide-react'
-import { PRICING_DATA } from '../../data/mock'
+import { PRICING_DATA } from '../../data/landing'
 import type { OpenAuthFn } from '../../types'
 
 interface PricingSectionProps {

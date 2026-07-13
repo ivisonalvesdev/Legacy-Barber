@@ -10,12 +10,15 @@ import { LandingPage }            from './components/landing/LandingPage'
 import { AuthModal }              from './components/auth/AuthModal'
 import { Sidebar }                from './components/dashboard/Sidebar'
 import { ClientView }             from './components/dashboard/ClientView'
+import { ClientBookingsView }     from './components/dashboard/ClientBookingsView'
 import { BarberView }             from './components/dashboard/BarberView'
+import { BarberInsumosView }      from './components/dashboard/BarberInsumosView'
+import { ProfileView }            from './components/dashboard/ProfileView'
 import { AdminDashboardView }     from './components/dashboard/AdminDashboardView'
 import { AdminEstoqueView }       from './components/dashboard/AdminEstoqueView'
 import { AdminEquipeView }        from './components/dashboard/AdminEquipeView'
 import { AdminRelatoriosView }    from './components/dashboard/AdminRelatoriosView'
-import { NAV_MAP }                from './components/dashboard/Sidebar'
+import { NAV_MAP }                from './components/dashboard/nav'
 
 export default function App() {
   const [currentUser, setUser]  = useState<AppUser | null>(null)
@@ -119,16 +122,25 @@ export default function App() {
     </>
   )
 
-  // ── Admin view router ──────────────────────────────────────
-  function AdminView() {
-    if (tab === 'estoque')    return <AdminEstoqueView />
-    if (tab === 'equipe')     return <AdminEquipeView user={currentUser!} />
-    if (tab === 'relatorios') return <AdminRelatoriosView />
-    return <AdminDashboardView user={currentUser!} />
-  }
-
   // ── Autenticado ────────────────────────────────────────────
   const navItems = NAV_MAP[currentUser.role]
+
+  // View ativa por papel + tab (JSX condicional, sem componentes aninhados)
+  const activeView =
+    currentUser.role === 'client' ? (
+      tab === 'agendamentos' ? <ClientBookingsView user={currentUser} />
+      : tab === 'perfil'     ? <ProfileView user={currentUser} onUpdate={setUser} />
+      : <ClientView user={currentUser} />
+    ) : currentUser.role === 'barber' ? (
+      tab === 'insumos'     ? <BarberInsumosView user={currentUser} />
+      : tab === 'perfil'    ? <ProfileView user={currentUser} onUpdate={setUser} />
+      : <BarberView user={currentUser} />
+    ) : (
+      tab === 'estoque'      ? <AdminEstoqueView user={currentUser} />
+      : tab === 'equipe'     ? <AdminEquipeView user={currentUser} />
+      : tab === 'relatorios' ? <AdminRelatoriosView user={currentUser} />
+      : <AdminDashboardView user={currentUser} />
+    )
 
   return (
     <div className="min-h-screen text-white relative"
@@ -209,9 +221,7 @@ export default function App() {
               <motion.div key={`${currentUser.role}-${tab}`}
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.26 }}>
-                {currentUser.role === 'client' && <ClientView user={currentUser} />}
-                {currentUser.role === 'barber' && <BarberView user={currentUser} />}
-                {currentUser.role === 'admin'  && <AdminView />}
+                {activeView}
               </motion.div>
             </AnimatePresence>
           </div>

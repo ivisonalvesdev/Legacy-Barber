@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Shield } from 'lucide-react'
-import { LANDING_FEATURES } from '../../data/mock'
+import { LANDING_FEATURES } from '../../data/landing'
 
 export function FeaturesSection() {
   return (

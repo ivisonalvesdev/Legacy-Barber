@@ -134,8 +134,17 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
 
       if (!data.user) throw new Error('Erro ao criar conta. Tente novamente.')
 
-      // Aguarda o trigger do Supabase criar a linha em profiles antes de atualizar
-      await new Promise(r => setTimeout(r, 1200))
+      // Aguarda o trigger do Supabase criar a linha em profiles (poll com retry,
+      // em vez de sleep fixo — resolve rápido quando o trigger é rápido)
+      let profileReady = false
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const { data: p } = await supabase
+          .from('profiles').select('id').eq('id', data.user.id).maybeSingle()
+        if (p) { profileReady = true; break }
+        await new Promise(r => setTimeout(r, 400))
+      }
+      if (!profileReady)
+        throw new Error('Conta criada, mas o perfil demorou para ser gerado. Faça login em instantes.')
 
       const userId   = data.user.id
       const initials = form.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()

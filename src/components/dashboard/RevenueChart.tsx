@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { REVENUE_DATA } from '../../data/mock'
 
 type Point = { day: string; value: number }
 
 interface RevenueChartProps {
-  /** Dados reais dos últimos 7 dias. Se omitido, usa mock. */
-  data?: Point[]
+  /** Dados reais dos últimos 7 dias. */
+  data: Point[]
 }
+
+const EMPTY_WEEK: Point[] = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+  .map(day => ({ day, value: 0 }))
 
 export function RevenueChart({ data }: RevenueChartProps) {
   const [hov, setHov] = useState<number | null>(null)
-  const chartData = data && data.length > 0 ? data : REVENUE_DATA
+  const chartData = data.length > 0 ? data : EMPTY_WEEK
 
   const W = 600, H = 160
   const P = { t: 10, r: 20, b: 28, l: 10 }

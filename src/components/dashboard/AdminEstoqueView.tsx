@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Package, Plus, Search, AlertTriangle, X, Check } from 'lucide-react'
-import { INVENTORY } from '../../data/mock'
+import { Package, Plus, Search, AlertTriangle, X, Check, Trash2 } from 'lucide-react'
+import type { AppUser, Product } from '../../types'
+import { PRODUCT_CATEGORIES } from '../../data/defaults'
+import { supabase } from '../../lib/supabase'
 
-type InvItem = typeof INVENTORY[number]
+interface AdminEstoqueViewProps {
+  user: AppUser
+}
 
-const CATEGORIES = ['Todos', 'Finalizador', 'Barba', 'Cabelo', 'Instrumental']
+const CATEGORIES = ['Todos', ...PRODUCT_CATEGORIES]
 
 function StockBar({ pct, color }: { pct: number; color: string }) {
   return (
@@ -18,35 +22,81 @@ function StockBar({ pct, color }: { pct: number; color: string }) {
   )
 }
 
-export function AdminEstoqueView() {
-  const [inv, setInv]         = useState<InvItem[]>(INVENTORY)
+export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
+  const [inv, setInv]         = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [errMsg, setErrMsg]   = useState('')
   const [search, setSearch]   = useState('')
   const [cat, setCat]         = useState('Todos')
   const [showAdd, setShowAdd] = useState(false)
+  const [saving, setSaving]   = useState(false)
   const [newItem, setNewItem] = useState({ name: '', category: 'Finalizador', stock: '', max: '', cost: '' })
-  const [qtys, setQtys]       = useState<Record<number, string>>({})
+  const [qtys, setQtys]       = useState<Record<string, string>>({})
 
-  const getQty = (id: number) => Math.max(1, parseInt(qtys[id] ?? '1', 10) || 1)
+  const getQty = (id: string) => Math.max(1, parseInt(qtys[id] ?? '1', 10) || 1)
 
-  const adjust = (id: number, delta: number) => {
-    const qty = getQty(id)
-    setInv(p => p.map(i => i.id === id ? { ...i, stock: Math.max(0, Math.min(i.max, i.stock + delta * qty)) } : i))
+  const load = useCallback(async () => {
+    if (!user.barbershopId) { setLoading(false); return }
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, category, stock, max_stock, unit, cost')
+      .eq('barbershop_id', user.barbershopId)
+      .order('name')
+    if (error) {
+      setErrMsg('Não foi possível carregar o estoque. Execute supabase/setup_final.sql no Supabase.')
+    } else {
+      setInv((data ?? []).map(p => ({
+        id:       p.id,
+        name:     p.name,
+        category: p.category,
+        stock:    p.stock,
+        maxStock: p.max_stock,
+        unit:     p.unit,
+        cost:     Number(p.cost),
+      })))
+    }
+    setLoading(false)
+  }, [user.barbershopId])
+
+  useEffect(() => { load() }, [load])
+
+  const adjust = async (item: Product, delta: number) => {
+    const qty = getQty(item.id)
+    const newStock = Math.max(0, Math.min(item.maxStock, item.stock + delta * qty))
+    if (newStock === item.stock) return
+    const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', item.id)
+    if (!error) setInv(p => p.map(i => i.id === item.id ? { ...i, stock: newStock } : i))
   }
 
-  const addItem = () => {
-    if (!newItem.name || !newItem.stock || !newItem.max) return
-    const item: InvItem = {
-      id: Date.now(),
-      name: newItem.name,
-      category: newItem.category,
-      stock: Number(newItem.stock),
-      max:   Number(newItem.max),
-      unit: 'un',
-      cost:  Number(newItem.cost) || 0,
-    }
-    setInv(p => [item, ...p])
+  const addItem = async () => {
+    if (!newItem.name || !newItem.stock || !newItem.max || !user.barbershopId) return
+    setSaving(true)
+    const { data, error } = await supabase
+      .from('products')
+      .insert({
+        barbershop_id: user.barbershopId,
+        name:          newItem.name.trim(),
+        category:      newItem.category,
+        stock:         Math.max(0, Number(newItem.stock)),
+        max_stock:     Math.max(1, Number(newItem.max)),
+        unit:          'un',
+        cost:          Number(newItem.cost) || 0,
+      })
+      .select('id, name, category, stock, max_stock, unit, cost')
+      .single()
+    setSaving(false)
+    if (error || !data) return
+    setInv(p => [{
+      id: data.id, name: data.name, category: data.category,
+      stock: data.stock, maxStock: data.max_stock, unit: data.unit, cost: Number(data.cost),
+    }, ...p])
     setNewItem({ name: '', category: 'Finalizador', stock: '', max: '', cost: '' })
     setShowAdd(false)
+  }
+
+  const removeItem = async (id: string) => {
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (!error) setInv(p => p.filter(i => i.id !== id))
   }
 
   const filtered = inv.filter(i => {
@@ -55,7 +105,7 @@ export function AdminEstoqueView() {
     return matchCat && matchSearch
   })
 
-  const lowStock  = inv.filter(i => (i.stock / i.max) <= 0.25).length
+  const lowStock  = inv.filter(i => (i.stock / i.maxStock) <= 0.25).length
   const totalCost = inv.reduce((a, b) => a + b.stock * b.cost, 0)
 
   return (
@@ -78,6 +128,15 @@ export function AdminEstoqueView() {
         </motion.button>
       </div>
 
+      {/* Erro de conexão / setup pendente */}
+      {errMsg && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+          style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
+          <AlertTriangle size={15} style={{ color: '#f87171', flexShrink: 0 }} />
+          <p style={{ fontSize: '13px', color: 'rgba(248,113,113,0.9)' }}>{errMsg}</p>
+        </div>
+      )}
+
       {/* Alertas de estoque baixo */}
       {lowStock > 0 && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
@@ -99,7 +158,7 @@ export function AdminEstoqueView() {
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar produto…"
             className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: 'rgba(255,255,255,0.8)', '::placeholder': { color: 'rgba(113,113,122,0.4)' } } as React.CSSProperties} />
+            style={{ color: 'rgba(255,255,255,0.8)' }} />
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {CATEGORIES.map(c => (
@@ -117,13 +176,13 @@ export function AdminEstoqueView() {
       </div>
 
       {/* Tabela */}
-      <div className="rounded-2xl overflow-hidden"
-        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ overflowX: 'auto' }}>
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              {['Produto', 'Categoria', 'Estoque', 'Nível', 'Custo Unit.', 'Ajustar'].map(h => (
-                <th key={h} className="px-5 py-3 text-left"
+              {['Produto', 'Categoria', 'Estoque', 'Nível', 'Custo Unit.', 'Ajustar', ''].map((h, i) => (
+                <th key={i} className="px-5 py-3 text-left"
                   style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   {h}
                 </th>
@@ -133,7 +192,7 @@ export function AdminEstoqueView() {
           <tbody>
             <AnimatePresence>
               {filtered.map((item, idx) => {
-                const pct      = (item.stock / item.max) * 100
+                const pct      = (item.stock / item.maxStock) * 100
                 const barColor = pct <= 25 ? '#ef4444' : pct <= 50 ? '#f59e0b' : '#D4AF37'
                 return (
                   <motion.tr key={item.id}
@@ -157,26 +216,23 @@ export function AdminEstoqueView() {
                     </td>
                     <td className="px-5 py-3.5 font-mono" style={{ fontSize: '13px' }}>
                       <span style={{ color: pct <= 25 ? '#f87171' : 'rgba(255,255,255,0.8)' }}>{item.stock}</span>
-                      <span style={{ color: 'rgba(113,113,122,0.45)' }}> / {item.max} {item.unit}</span>
+                      <span style={{ color: 'rgba(113,113,122,0.45)' }}> / {item.maxStock} {item.unit}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       <StockBar pct={pct} color={barColor} />
                     </td>
                     <td className="px-5 py-3.5 font-mono" style={{ fontSize: '13px', color: 'rgba(113,113,122,0.55)' }}>
-                      R$ {item.cost},00
+                      R$ {item.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1">
-                        {/* Botão − */}
-                        <button onClick={() => adjust(item.id, -1)}
+                        <button onClick={() => adjust(item, -1)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-all flex-shrink-0"
                           style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}
                           onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(239,68,68,0.4)'; b.style.color = '#f87171'; b.style.background = 'rgba(239,68,68,0.06)' }}
                           onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(113,113,122,0.7)'; b.style.background = 'transparent' }}>
                           −
                         </button>
-
-                        {/* Input de quantidade */}
                         <input
                           type="number"
                           min="1"
@@ -190,14 +246,8 @@ export function AdminEstoqueView() {
                             border: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: '8px',
                             color: 'rgba(255,255,255,0.75)',
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(212,175,55,0.3)' }}
-                          onMouseLeave={e => { if (document.activeElement !== e.currentTarget) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
-                          onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
-                        />
-
-                        {/* Botão + */}
-                        <button onClick={() => adjust(item.id, +1)}
+                          }} />
+                        <button onClick={() => adjust(item, +1)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-all flex-shrink-0"
                           style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}
                           onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(212,175,55,0.4)'; b.style.color = '#D4AF37'; b.style.background = 'rgba(212,175,55,0.06)' }}
@@ -206,20 +256,30 @@ export function AdminEstoqueView() {
                         </button>
                       </div>
                     </td>
+                    <td className="px-3 py-3.5">
+                      <button onClick={() => removeItem(item.id)} title="Remover produto"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                        style={{ color: 'rgba(113,113,122,0.35)' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#f87171' }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(113,113,122,0.35)' }}>
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
                   </motion.tr>
                 )
               })}
             </AnimatePresence>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center"
+                <td colSpan={7} className="px-5 py-10 text-center"
                   style={{ color: 'rgba(113,113,122,0.4)', fontSize: '13px' }}>
-                  Nenhum produto encontrado
+                  {loading ? 'Carregando…' : 'Nenhum produto encontrado'}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Modal — Adicionar Produto */}
@@ -276,7 +336,7 @@ export function AdminEstoqueView() {
                     onChange={e => setNewItem(p => ({ ...p, category: e.target.value }))}
                     className="w-full mt-1 px-3 py-2.5 rounded-xl outline-none text-sm"
                     style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }}>
-                    {['Finalizador', 'Barba', 'Cabelo', 'Instrumental'].map(c => (
+                    {PRODUCT_CATEGORIES.map(c => (
                       <option key={c} value={c} style={{ background: '#0d0d0d' }}>{c}</option>
                     ))}
                   </select>
@@ -290,10 +350,10 @@ export function AdminEstoqueView() {
                   Cancelar
                 </button>
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={addItem}
+                  onClick={addItem} disabled={saving}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-black"
-                  style={{ background: 'linear-gradient(135deg,#B8951F,#D4AF37)' }}>
-                  <Check size={14} /> Adicionar
+                  style={{ background: saving ? 'rgba(212,175,55,0.4)' : 'linear-gradient(135deg,#B8951F,#D4AF37)', cursor: saving ? 'not-allowed' : 'pointer' }}>
+                  <Check size={14} /> {saving ? 'Salvando…' : 'Adicionar'}
                 </motion.button>
               </div>
             </motion.div>

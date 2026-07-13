@@ -13,3 +13,24 @@ export interface AppUser {
 }
 
 export type OpenAuthFn = (mode?: 'login' | 'register') => void
+
+export type BookingStatus = 'upcoming' | 'current' | 'done' | 'cancelled'
+
+export interface Service {
+  id:          string
+  name:        string
+  durationMin: number
+  price:       number
+  emoji:       string
+  popular:     boolean
+}
+
+export interface Product {
+  id:       string
+  name:     string
+  category: string
+  stock:    number
+  maxStock: number
+  unit:     string
+  cost:     number
+}

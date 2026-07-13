@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { DollarSign, TrendingUp, Users, Activity, ArrowUpRight, Plus, Clock } from 'lucide-react'
 import type { AppUser } from '../../types'
-import { StatCard }     from '../ui/StatCard'
-import { RevenueChart } from './RevenueChart'
-import { supabase }     from '../../lib/supabase'
+import { StatCard }        from '../ui/StatCard'
+import { RevenueChart }    from './RevenueChart'
+import { NewBookingModal } from './NewBookingModal'
+import { TIME_SLOTS }      from '../../data/defaults'
+import { supabase }        from '../../lib/supabase'
 
 interface AdminDashboardViewProps { user: AppUser }
 
@@ -44,9 +46,9 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
   const [revenueData, setRevData]   = useState<RevenuePoint[]>([])
   const [weekDelta, setWeekDelta]   = useState<number | null>(null)
   const [loading, setLoading]       = useState(true)
+  const [showNew, setShowNew]       = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
+  const load = useCallback(async () => {
       if (!user.barbershopId) { setLoading(false); return }
 
       const bsId       = user.barbershopId
@@ -63,12 +65,13 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
       const prev7Start = dp.toISOString().split('T')[0]
       const prev7End   = new Date(d7.getTime() - 86400000).toISOString().split('T')[0]
 
-      const [todayRes, monthRes, agendaRes, last7Res, prev7Res] = await Promise.all([
-        // KPI hoje
+      const [todayRes, monthRes, agendaRes, last7Res, prev7Res, barbersRes] = await Promise.all([
+        // KPI hoje (cancelados fora)
         supabase.from('bookings')
           .select('service_price, status')
           .eq('barbershop_id', bsId)
-          .eq('date', todayISO),
+          .eq('date', todayISO)
+          .neq('status', 'cancelled'),
 
         // KPI mês + top services
         supabase.from('bookings')
@@ -78,11 +81,12 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           .gte('date', monthStart)
           .lte('date', monthEnd),
 
-        // Agenda do dia com nome do cliente
+        // Agenda do dia com nome do cliente (client_name cobre walk-ins)
         supabase.from('bookings')
-          .select('time, service_name, status, client:profiles!bookings_client_id_fkey(name)')
+          .select('time, service_name, status, client_name, client:profiles!bookings_client_id_fkey(name)')
           .eq('barbershop_id', bsId)
           .eq('date', todayISO)
+          .neq('status', 'cancelled')
           .order('time'),
 
         // Últimos 7 dias para o gráfico
@@ -100,6 +104,13 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           .eq('status', 'done')
           .gte('date', prev7Start)
           .lte('date', prev7End),
+
+        // Barbeiros ativos — capacidade do dia para a taxa de ocupação
+        supabase.from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('barbershop_id', bsId)
+          .eq('role', 'barber')
+          .eq('active', true),
       ])
 
       // ── KPIs ────────────────────────────────────────────────
@@ -108,15 +119,21 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
       const revenueToday = todayRows.filter(b => b.status === 'done').reduce((s, b) => s + Number(b.service_price), 0)
       const revenueMonth = monthRows.reduce((s, b) => s + Number(b.service_price), 0)
       const clientsToday = todayRows.length
-      const doneCount    = todayRows.filter(b => b.status === 'done').length
-      const occupation   = clientsToday > 0 ? Math.round((doneCount / clientsToday) * 100) : 0
+      // Ocupação = agendamentos do dia ÷ capacidade (slots × barbeiros ativos)
+      const barberCount  = barbersRes.count ?? 0
+      const capacity     = TIME_SLOTS.length * Math.max(barberCount, 1)
+      const occupation   = Math.min(100, Math.round((clientsToday / capacity) * 100))
 
       setKpis({ revenueToday, revenueMonth, clientsToday, occupation })
 
       // ── Agenda ──────────────────────────────────────────────
-      const items: AgendaItem[] = (agendaRes.data ?? []).map((b: any) => ({
+      type AgendaRow = {
+        time: string; service_name: string; status: string
+        client_name: string | null; client: { name: string } | null
+      }
+      const items: AgendaItem[] = ((agendaRes.data ?? []) as unknown as AgendaRow[]).map(b => ({
         time:    b.time,
-        client:  b.client?.name ?? 'Cliente',
+        client:  b.client?.name ?? b.client_name ?? 'Cliente',
         service: b.service_name,
         status:  b.status as AgendaItem['status'],
       }))
@@ -139,29 +156,30 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
       setTopSvc(top)
 
       // ── Gráfico — últimos 7 dias ─────────────────────────────
+      type PriceRow = { date?: string; service_price: number | string }
+      const last7Rows = (last7Res.data ?? []) as PriceRow[]
       const last7Points: RevenuePoint[] = []
       for (let i = 6; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i)
         const iso = d.toISOString().split('T')[0]
-        const val = (last7Res.data ?? [])
-          .filter((b: any) => b.date === iso)
-          .reduce((s: number, b: any) => s + Number(b.service_price), 0)
+        const val = last7Rows
+          .filter(b => b.date === iso)
+          .reduce((s, b) => s + Number(b.service_price), 0)
         last7Points.push({ day: DAYS_PT[d.getDay()], value: val })
       }
       setRevData(last7Points)
 
       // ── Delta semana ─────────────────────────────────────────
       const thisWeekTotal = last7Points.reduce((s, p) => s + p.value, 0)
-      const prevWeekTotal = (prev7Res.data ?? []).reduce((s: number, b: any) => s + Number(b.service_price), 0)
+      const prevWeekTotal = ((prev7Res.data ?? []) as PriceRow[]).reduce((s, b) => s + Number(b.service_price), 0)
       if (prevWeekTotal > 0) {
         setWeekDelta(Math.round(((thisWeekTotal - prevWeekTotal) / prevWeekTotal) * 100))
       }
 
       setLoading(false)
-    }
-
-    load()
   }, [todayISO, user.barbershopId])
+
+  useEffect(() => { load() }, [load])
 
   const totalChart = revenueData.reduce((s, p) => s + p.value, 0)
 
@@ -178,6 +196,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           </p>
         </div>
         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => setShowNew(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
           style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)', color: '#D4AF37' }}>
           <Plus size={13} /> Novo Agendamento
@@ -212,7 +231,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
               </div>
             )}
           </div>
-          <RevenueChart data={revenueData.length > 0 ? revenueData : undefined} />
+          <RevenueChart data={revenueData} />
         </div>
 
         {/* Top Services — 1/3 */}
@@ -283,6 +302,14 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           })}
         </div>
       </div>
+
+      {/* Modal — agendamento manual (walk-in) */}
+      <NewBookingModal
+        user={user}
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        onCreated={load}
+      />
     </div>
   )
 }

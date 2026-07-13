@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Star } from 'lucide-react'
-import { TESTIMONIALS_DATA } from '../../data/mock'
+import { TESTIMONIALS_DATA } from '../../data/landing'
 
 export function TestimonialsSection() {
   return (

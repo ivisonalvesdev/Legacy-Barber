@@ -1,0 +1,179 @@
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Calendar, Clock, Scissors, XCircle } from 'lucide-react'
+import type { AppUser, BookingStatus } from '../../types'
+import { supabase } from '../../lib/supabase'
+
+interface ClientBookingsViewProps {
+  user: AppUser
+}
+
+type Booking = {
+  id:      string
+  date:    string
+  time:    string
+  service: string
+  price:   number
+  barber:  string
+  status:  BookingStatus
+}
+
+const STATUS_BADGE: Record<BookingStatus, { label: string; color: string; bg: string; border: string }> = {
+  upcoming:  { label: 'Agendado',  color: '#D4AF37',                 bg: 'rgba(212,175,55,0.08)',  border: 'rgba(212,175,55,0.2)'  },
+  current:   { label: 'Em curso',  color: '#60a5fa',                 bg: 'rgba(96,165,250,0.08)',  border: 'rgba(96,165,250,0.2)'  },
+  done:      { label: 'Concluído', color: '#4ade80',                 bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.2)'  },
+  cancelled: { label: 'Cancelado', color: 'rgba(248,113,113,0.85)',  bg: 'rgba(239,68,68,0.07)',   border: 'rgba(239,68,68,0.18)'  },
+}
+
+const fmtDate = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+}
+
+export function ClientBookingsView({ user }: ClientBookingsViewProps) {
+  const [bookings, setBookings]   = useState<Booking[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [cancelling, setCancelling] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase
+      .from('bookings')
+      .select('id, date, time, service_name, service_price, status, barber:profiles!bookings_barber_id_fkey(name)')
+      .eq('client_id', user.id)
+      .order('date', { ascending: false })
+      .order('time', { ascending: false })
+      .then(({ data }) => {
+        type Row = {
+          id: string; date: string; time: string; service_name: string
+          service_price: number | string; status: string; barber: { name: string } | null
+        }
+        if (data) setBookings((data as unknown as Row[]).map(b => ({
+          id:      b.id,
+          date:    b.date,
+          time:    b.time,
+          service: b.service_name,
+          price:   Number(b.service_price),
+          barber:  b.barber?.name ?? 'Barbeiro',
+          status:  b.status as BookingStatus,
+        })))
+        setLoading(false)
+      })
+  }, [user.id])
+
+  const cancel = async (id: string) => {
+    setCancelling(id)
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .eq('client_id', user.id)
+    setCancelling(null)
+    if (!error) setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b))
+  }
+
+  const todayISO  = new Date().toISOString().split('T')[0]
+  const upcoming  = bookings.filter(b => (b.status === 'upcoming' || b.status === 'current') && b.date >= todayISO)
+  const history   = bookings.filter(b => !upcoming.includes(b))
+
+  const Card = ({ b, idx, cancellable }: { b: Booking; idx: number; cancellable: boolean }) => {
+    const badge = STATUS_BADGE[b.status]
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        transition={{ delay: idx * 0.05 }}
+        className="rounded-2xl p-4 flex items-center gap-4"
+        style={{
+          background: 'rgba(255,255,255,0.022)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          opacity: b.status === 'cancelled' ? 0.55 : 1,
+        }}>
+        <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.16)' }}>
+          <Calendar size={13} style={{ color: '#D4AF37' }} />
+          <span style={{ fontSize: '9px', color: 'rgba(212,175,55,0.8)', fontWeight: 700, marginTop: '2px' }}>
+            {b.date.split('-')[2]}/{b.date.split('-')[1]}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '13px' }} className="truncate">{b.service}</div>
+          <div className="flex items-center gap-3 mt-1" style={{ fontSize: '11px', color: 'rgba(113,113,122,0.6)' }}>
+            <span className="flex items-center gap-1"><Scissors size={10} />{b.barber}</span>
+            <span className="flex items-center gap-1"><Clock size={10} />{fmtDate(b.date)} · {b.time}</span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}>
+            {badge.label}
+          </span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#D4AF37', fontFamily: 'monospace' }}>R$ {b.price}</span>
+        </div>
+        {cancellable && b.status === 'upcoming' && (
+          <button
+            onClick={() => cancel(b.id)}
+            disabled={cancelling === b.id}
+            title="Cancelar agendamento"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex-shrink-0 transition-all"
+            style={{ background: 'rgba(239,68,68,0.06)', color: '#f87171', border: '1px solid rgba(239,68,68,0.18)', cursor: cancelling === b.id ? 'wait' : 'pointer' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.14)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)' }}>
+            <XCircle size={11} /> {cancelling === b.id ? '…' : 'Cancelar'}
+          </button>
+        )}
+      </motion.div>
+    )
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-8">
+      <div>
+        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '30px', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
+          Meus Agendamentos
+        </h1>
+        <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+          Acompanhe e gerencie seus horários
+        </p>
+      </div>
+
+      {loading && (
+        <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>Carregando…</p>
+      )}
+
+      {!loading && bookings.length === 0 && (
+        <div className="rounded-2xl p-8 text-center"
+          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <Calendar size={28} style={{ color: 'rgba(212,175,55,0.3)', margin: '0 auto 12px' }} />
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 500 }}>Nenhum agendamento ainda</p>
+          <p style={{ color: 'rgba(113,113,122,0.5)', fontSize: '12px', marginTop: '4px' }}>
+            Use a aba <strong style={{ color: '#D4AF37' }}>Agendar</strong> para marcar seu primeiro horário.
+          </p>
+        </div>
+      )}
+
+      {upcoming.length > 0 && (
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+            Próximos
+          </div>
+          <div className="space-y-2.5">
+            <AnimatePresence>
+              {upcoming.map((b, i) => <Card key={b.id} b={b} idx={i} cancellable />)}
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+            Histórico
+          </div>
+          <div className="space-y-2.5">
+            {history.map((b, i) => <Card key={b.id} b={b} idx={i} cancellable={false} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
