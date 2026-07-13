@@ -3,27 +3,26 @@
 --
 -- Este é o ÚNICO script que você precisa rodar. Ele é idempotente:
 -- pode ser executado quantas vezes quiser sem duplicar ou destruir dados.
+-- Se alguma tabela já existir com colunas faltando, ele completa o formato.
 --
 -- COMO RODAR:
 --   1. Supabase Dashboard → SQL Editor → New query
---   2. Cole ESTE ARQUIVO INTEIRO
+--   2. Cole ESTE ARQUIVO INTEIRO (do início ao fim)
 --   3. Clique em Run
 --   4. A última query mostra um resumo de verificação
---
--- O que ele faz:
---   • Cria/garante as 5 tabelas: barbershops, profiles, bookings,
---     products (estoque), services (catálogo por barbearia)
---   • Adiciona colunas novas: profiles.active, bookings.client_name
---   • Impede agendamento duplo no mesmo horário (índice único)
---   • Recria TODAS as policies de RLS do zero (estado limpo)
---   • Trigger que cria o profile automaticamente no cadastro
---   • Trigger que semeia serviços padrão ao criar uma barbearia
---   • Semeia serviços e produtos iniciais para barbearias já existentes
 -- ═══════════════════════════════════════════════════════════════════════
+
+-- Evita validação antecipada do corpo de funções SQL (ordem-independente)
+SET check_function_bodies = off;
+
+-- ⚠️ APENAS se você tinha tabelas antigas de TESTE chamadas products/services
+--    (de experimentos anteriores, sem relação com este app), descomente:
+-- DROP TABLE IF EXISTS public.products CASCADE;
+-- DROP TABLE IF EXISTS public.services CASCADE;
 
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 1. TABELAS BASE
+-- 1. TABELAS BASE (cria se não existir)
 -- ─────────────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.barbershops (
@@ -40,17 +39,18 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id            UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name          TEXT        NOT NULL DEFAULT 'Usuário',
   phone         TEXT        NOT NULL DEFAULT '',
-  role          TEXT        NOT NULL DEFAULT 'client'
-                CHECK (role IN ('admin', 'barber', 'client')),
+  role          TEXT        NOT NULL DEFAULT 'client',
   specialty     TEXT,
   avatar        TEXT        NOT NULL DEFAULT '',
   barbershop_id UUID        REFERENCES public.barbershops(id) ON DELETE SET NULL,
+  active        BOOLEAN     NOT NULL DEFAULT true,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.bookings (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id     UUID        REFERENCES auth.users(id) ON DELETE CASCADE,
+  client_name   TEXT,
   barber_id     UUID        NOT NULL REFERENCES auth.users(id),
   barbershop_id UUID        REFERENCES public.barbershops(id) ON DELETE SET NULL,
   service_name  TEXT        NOT NULL,
@@ -62,32 +62,13 @@ CREATE TABLE IF NOT EXISTS public.bookings (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Colunas novas (seguras de re-rodar)
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS barbershop_id UUID REFERENCES public.barbershops(id) ON DELETE SET NULL;
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
-
-ALTER TABLE public.bookings
-  ADD COLUMN IF NOT EXISTS barbershop_id UUID REFERENCES public.barbershops(id) ON DELETE SET NULL;
--- client_name: usado em agendamentos manuais (walk-in) criados pelo admin
-ALTER TABLE public.bookings
-  ADD COLUMN IF NOT EXISTS client_name TEXT;
--- client_id vira opcional (walk-ins não têm conta)
-ALTER TABLE public.bookings ALTER COLUMN client_id DROP NOT NULL;
-
-
--- ─────────────────────────────────────────────────────────────────────────
--- 2. TABELAS NOVAS — ESTOQUE E CATÁLOGO DE SERVIÇOS
--- ─────────────────────────────────────────────────────────────────────────
-
 CREATE TABLE IF NOT EXISTS public.products (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  barbershop_id UUID        NOT NULL REFERENCES public.barbershops(id) ON DELETE CASCADE,
-  name          TEXT        NOT NULL,
+  barbershop_id UUID        REFERENCES public.barbershops(id) ON DELETE CASCADE,
+  name          TEXT        NOT NULL DEFAULT '',
   category      TEXT        NOT NULL DEFAULT 'Finalizador',
-  stock         INTEGER     NOT NULL DEFAULT 0 CHECK (stock >= 0),
-  max_stock     INTEGER     NOT NULL DEFAULT 100 CHECK (max_stock > 0),
+  stock         INTEGER     NOT NULL DEFAULT 0,
+  max_stock     INTEGER     NOT NULL DEFAULT 100,
   unit          TEXT        NOT NULL DEFAULT 'un',
   cost          NUMERIC     NOT NULL DEFAULT 0,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -95,8 +76,8 @@ CREATE TABLE IF NOT EXISTS public.products (
 
 CREATE TABLE IF NOT EXISTS public.services (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  barbershop_id UUID        NOT NULL REFERENCES public.barbershops(id) ON DELETE CASCADE,
-  name          TEXT        NOT NULL,
+  barbershop_id UUID        REFERENCES public.barbershops(id) ON DELETE CASCADE,
+  name          TEXT        NOT NULL DEFAULT '',
   duration_min  INTEGER     NOT NULL DEFAULT 30,
   price         NUMERIC     NOT NULL DEFAULT 0,
   emoji         TEXT        NOT NULL DEFAULT '✂️',
@@ -104,6 +85,58 @@ CREATE TABLE IF NOT EXISTS public.services (
   active        BOOLEAN     NOT NULL DEFAULT true,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 2. COMPATIBILIDADE — completa colunas em tabelas que JÁ existiam
+--    (cada linha é segura de re-rodar; nada é sobrescrito)
+-- ─────────────────────────────────────────────────────────────────────────
+
+-- barbershops
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS owner_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS invite_code TEXT DEFAULT upper(left(replace(gen_random_uuid()::text, '-', ''), 6));
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS plan        TEXT NOT NULL DEFAULT 'basic';
+UPDATE public.barbershops
+  SET invite_code = upper(left(replace(gen_random_uuid()::text, '-', ''), 6))
+  WHERE invite_code IS NULL;
+
+-- profiles
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name          TEXT NOT NULL DEFAULT 'Usuário';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone         TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role          TEXT NOT NULL DEFAULT 'client';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS specialty     TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar        TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS barbershop_id UUID REFERENCES public.barbershops(id) ON DELETE SET NULL;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS active        BOOLEAN NOT NULL DEFAULT true;
+
+-- bookings
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS client_id     UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS client_name   TEXT;
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS barbershop_id UUID REFERENCES public.barbershops(id) ON DELETE SET NULL;
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS service_name  TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS service_price NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS status        TEXT NOT NULL DEFAULT 'upcoming';
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS created_at    TIMESTAMPTZ NOT NULL DEFAULT now();
+-- client_id vira opcional (walk-ins não têm conta)
+ALTER TABLE public.bookings ALTER COLUMN client_id DROP NOT NULL;
+
+-- products
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS barbershop_id UUID REFERENCES public.barbershops(id) ON DELETE CASCADE;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS name          TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category      TEXT NOT NULL DEFAULT 'Finalizador';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS stock         INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS max_stock     INTEGER NOT NULL DEFAULT 100;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS unit          TEXT NOT NULL DEFAULT 'un';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS cost          NUMERIC NOT NULL DEFAULT 0;
+
+-- services
+ALTER TABLE public.services ADD COLUMN IF NOT EXISTS barbershop_id UUID REFERENCES public.barbershops(id) ON DELETE CASCADE;
+ALTER TABLE public.services ADD COLUMN IF NOT EXISTS name          TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.services ADD COLUMN IF NOT EXISTS duration_min  INTEGER NOT NULL DEFAULT 30;
+ALTER TABLE public.services ADD COLUMN IF NOT EXISTS price         NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE public.services ADD COLUMN IF NOT EXISTS emoji         TEXT NOT NULL DEFAULT '✂️';
+ALTER TABLE public.services ADD COLUMN IF NOT EXISTS popular       BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.services ADD COLUMN IF NOT EXISTS active        BOOLEAN NOT NULL DEFAULT true;
 
 
 -- ─────────────────────────────────────────────────────────────────────────
