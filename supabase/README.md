@@ -10,7 +10,7 @@
 | item | esperado |
 |---|---|
 | tabelas | 5 |
-| policies | 18 |
+| policies | 19 |
 | trigger profiles | 1 |
 | trigger serviços | 1 |
 | índice anti agendamento duplo | 1 |

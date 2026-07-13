@@ -411,7 +411,7 @@ UNION ALL
 
 SELECT 'policies',
        count(*)::text,
-       'esperado: 18'
+       'esperado: 19'
 FROM pg_policies
 WHERE schemaname = 'public'
   AND tablename IN ('profiles', 'barbershops', 'bookings', 'products', 'services')
