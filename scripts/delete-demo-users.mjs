@@ -17,33 +17,46 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
-// Donos primeiro (cascade remove barbershop → bookings/products/services),
-// depois barbeiro/cliente (que não têm mais bookings apontando pra eles).
-const EMAILS_ORDER = [
-  'admin@legacybarber.com',
-  'admin.demo@legacybarber.com',
-  'barber.demo@legacybarber.com',
-  'client.demo@legacybarber.com',
-]
+// Contas fixas + os figurantes gerados por seed-demo-data.mjs (barber2.demo,
+// client01.demo…), que são descobertos pelo sufixo .demo@legacybarber.com.
+const DEMO_SUFFIX = '.demo@legacybarber.com'
+const DEV_EMAIL   = 'admin@legacybarber.com'
+// Donos primeiro: o cascade leva barbershop → bookings/products/services junto.
+const OWNERS_FIRST = [DEV_EMAIL, `admin${DEMO_SUFFIX}`]
+
+async function listAllUsers() {
+  const all = []
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error) throw new Error(`Erro ao listar usuários: ${error.message}`)
+    all.push(...data.users)
+    if (data.users.length < 1000) return all
+  }
+}
 
 async function main() {
   console.log('\n🗑️   Removendo contas...\n')
 
-  const { data: existing, error: listError } = await admin.auth.admin.listUsers()
-  if (listError) throw new Error(`Erro ao listar usuários: ${listError.message}`)
+  const existing = await listAllUsers()
+  const targets  = existing.filter(u => u.email === DEV_EMAIL || u.email?.endsWith(DEMO_SUFFIX))
 
-  for (const email of EMAILS_ORDER) {
-    const user = existing.users.find(u => u.email === email)
-    if (!user) {
-      console.log(`  ⚠️  Não encontrado (já removido?): ${email}`)
-      continue
-    }
+  if (targets.length === 0) {
+    console.log('  ⚠️  Nenhuma conta demo encontrada (já removidas?)\n')
+    return
+  }
+
+  targets.sort((a, b) => {
+    const rank = e => { const i = OWNERS_FIRST.indexOf(e); return i === -1 ? OWNERS_FIRST.length : i }
+    return rank(a.email) - rank(b.email)
+  })
+
+  for (const user of targets) {
     const { error } = await admin.auth.admin.deleteUser(user.id)
     if (error) {
-      console.error(`  ❌  Erro ao remover ${email}: ${error.message}`)
+      console.error(`  ❌  Erro ao remover ${user.email}: ${error.message}`)
       continue
     }
-    console.log(`  ✅  Removido: ${email}`)
+    console.log(`  ✅  Removido: ${user.email}`)
   }
 
   console.log('\n═'.repeat(58))

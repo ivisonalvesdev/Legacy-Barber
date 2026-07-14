@@ -18,6 +18,36 @@ const iso = (d: Date) => d.toISOString().split('T')[0]
 const DAYS_PT   = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const MONTHS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
+// O PostgREST corta a resposta em 1000 linhas; 6 meses de agenda passa disso
+// numa barbearia movimentada, então busca em páginas até esgotar.
+const PAGE_SIZE = 1000
+
+async function fetchDoneBookings(barbershopId: string, startISO: string) {
+  const all: BookingRow[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase.from('bookings')
+      .select('barber_id, client_id, service_name, service_price, date')
+      .eq('barbershop_id', barbershopId)
+      .eq('status', 'done')
+      .gte('date', startISO)
+      .order('date')
+      .range(from, from + PAGE_SIZE - 1)
+
+    if (error || !data) break
+    all.push(...(data as BookingRow[]))
+    if (data.length < PAGE_SIZE) break
+  }
+  return all
+}
+
+type BookingRow = {
+  barber_id:     string
+  client_id:     string | null
+  service_name:  string
+  service_price: number | string
+  date:          string
+}
+
 const DIST_COLORS = [
   '#D4AF37',
   'rgba(212,175,55,0.6)',
@@ -100,24 +130,20 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
       // Janela única de 6 meses — tudo é agregado aqui no cliente
       const start6m = new Date(now.getFullYear(), now.getMonth() - 5, 1)
 
-      const [bookingsRes, barbersRes] = await Promise.all([
-        supabase.from('bookings')
-          .select('barber_id, client_id, service_name, service_price, date')
-          .eq('barbershop_id', user.barbershopId!)
-          .eq('status', 'done')
-          .gte('date', iso(start6m)),
+      const [bookingRows, barbersRes] = await Promise.all([
+        fetchDoneBookings(user.barbershopId!, iso(start6m)),
         supabase.from('profiles')
           .select('id, name, avatar')
           .eq('barbershop_id', user.barbershopId!)
           .eq('role', 'barber'),
       ])
 
-      const rows = (bookingsRes.data ?? []).map(b => ({
-        barberId: b.barber_id as string,
-        clientId: b.client_id as string | null,
-        service:  b.service_name as string,
+      const rows = bookingRows.map(b => ({
+        barberId: b.barber_id,
+        clientId: b.client_id,
+        service:  b.service_name,
         price:    Number(b.service_price),
-        date:     b.date as string,
+        date:     b.date,
       }))
       const barberNames = new Map(
         (barbersRes.data ?? []).map(b => [b.id, { name: b.name as string, avatar: (b.avatar ?? '—') as string }])
