@@ -177,6 +177,21 @@ SET search_path = public AS $$
   SELECT barbershop_id FROM public.profiles WHERE id = auth.uid()
 $$;
 
+-- Detecta contas de demonstração (…demo@legacybarber.com).
+-- Usada para deixar os dados mock APENAS para visualização: as policies
+-- restritivas mais abaixo bloqueiam escrita quando esta função retorna true.
+-- SECURITY DEFINER: precisa ler auth.users, invisível ao usuário comum.
+-- Obs.: a conta do dev (admin@legacybarber.com, SEM ".demo") NÃO é afetada.
+CREATE OR REPLACE FUNCTION public.is_demo_user()
+RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER STABLE
+SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM auth.users
+    WHERE id = auth.uid()
+      AND email LIKE '%.demo@legacybarber.com'
+  )
+$$;
+
 -- Cria o profile automaticamente quando o usuário confirma o cadastro
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
@@ -395,6 +410,29 @@ CREATE POLICY "owner manages services" ON public.services
     )
   );
 
+-- ── MODO SOMENTE-LEITURA PARA CONTAS DEMO ────────────────────────────────
+-- Policies RESTRICTIVE: são combinadas com AND sobre TODAS as permissivas
+-- acima, então bloqueiam INSERT/UPDATE/DELETE das contas demo em todas as
+-- tabelas SEM tocar no SELECT — os dados mock ficam só para visualização.
+-- Para contas normais, is_demo_user() é false e nada muda.
+-- 3 policies (insert/update/delete) × 5 tabelas = 15 policies restritivas.
+DO $$
+DECLARE t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['profiles', 'barbershops', 'bookings', 'products', 'services']
+  LOOP
+    EXECUTE format(
+      'CREATE POLICY "demo readonly no insert" ON public.%I '
+      'AS RESTRICTIVE FOR INSERT WITH CHECK (NOT public.is_demo_user())', t);
+    EXECUTE format(
+      'CREATE POLICY "demo readonly no update" ON public.%I '
+      'AS RESTRICTIVE FOR UPDATE USING (NOT public.is_demo_user())', t);
+    EXECUTE format(
+      'CREATE POLICY "demo readonly no delete" ON public.%I '
+      'AS RESTRICTIVE FOR DELETE USING (NOT public.is_demo_user())', t);
+  END LOOP;
+END $$;
+
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 7. VERIFICAÇÃO FINAL — rode e confira o resultado
@@ -411,7 +449,7 @@ UNION ALL
 
 SELECT 'policies',
        count(*)::text,
-       'esperado: 19'
+       'esperado: 34'  -- 19 permissivas + 15 restritivas (somente-leitura demo)
 FROM pg_policies
 WHERE schemaname = 'public'
   AND tablename IN ('profiles', 'barbershops', 'bookings', 'products', 'services')
