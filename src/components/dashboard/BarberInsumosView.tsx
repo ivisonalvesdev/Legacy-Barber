@@ -42,7 +42,21 @@ export function BarberInsumosView({ user }: BarberInsumosViewProps) {
     if (item.stock <= 0) return
     const newStock = item.stock - 1
     const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', item.id)
-    if (!error) setInv(p => p.map(i => i.id === item.id ? { ...i, stock: newStock } : i))
+    if (!error) {
+      setInv(p => p.map(i => i.id === item.id ? { ...i, stock: newStock } : i))
+      // Registra o consumo no livro-caixa — alimenta o relatório do dono
+      supabase.from('stock_movements').insert({
+        barbershop_id: user.barbershopId,
+        product_id:    item.id,
+        product_name:  item.name,
+        profile_id:    user.id,
+        type:          'out',
+        qty:           1,
+        unit_cost:     item.cost,
+      }).then(({ error: mErr }) => {
+        if (mErr) console.warn('[stock_movements]', mErr.message)
+      })
+    }
   }
 
   return (

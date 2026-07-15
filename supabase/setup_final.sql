@@ -117,6 +117,25 @@ CREATE TABLE IF NOT EXISTS public.services (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Livro-caixa de insumos: cada compra (in) e cada consumo (out) vira uma
+-- linha com o custo da época. O estoque atual vive em products.stock; esta
+-- tabela é o histórico que alimenta o relatório financeiro (quanto entra ×
+-- quanto sai). Imutável de propósito: sem policy de UPDATE/DELETE, corrigir
+-- é lançar um movimento contrário — como num caixa de verdade.
+CREATE TABLE IF NOT EXISTS public.stock_movements (
+  id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  barbershop_id UUID          NOT NULL REFERENCES public.barbershops(id) ON DELETE CASCADE,
+  -- SET NULL + product_name: apagar o produto não pode apagar o gasto que
+  -- ele gerou no relatório do mês.
+  product_id    UUID          REFERENCES public.products(id) ON DELETE SET NULL,
+  product_name  TEXT          NOT NULL,
+  profile_id    UUID          REFERENCES public.profiles(id) ON DELETE SET NULL,
+  type          TEXT          NOT NULL CHECK (type IN ('in', 'out')),
+  qty           INTEGER       NOT NULL CHECK (qty > 0),
+  unit_cost     NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (unit_cost >= 0),
+  created_at    TIMESTAMPTZ   NOT NULL DEFAULT now()
+);
+
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 2. COMPATIBILIDADE — completa colunas em tabelas que JÁ existiam
@@ -204,6 +223,8 @@ CREATE INDEX IF NOT EXISTS bookings_client_idx          ON public.bookings (clie
 CREATE INDEX IF NOT EXISTS products_shop_idx            ON public.products (barbershop_id);
 CREATE INDEX IF NOT EXISTS services_shop_idx            ON public.services (barbershop_id);
 CREATE INDEX IF NOT EXISTS profiles_shop_role_idx       ON public.profiles (barbershop_id, role);
+-- O relatório sempre pergunta "movimentos desta barbearia nos últimos N meses"
+CREATE INDEX IF NOT EXISTS stock_movements_shop_date_idx ON public.stock_movements (barbershop_id, created_at);
 
 -- Busca da vitrine: ILIKE '%termo%' não usa índice B-tree comum, por isso o
 -- índice de trigramas. É otimização — se pg_trgm não estiver disponível, a
@@ -376,21 +397,9 @@ WHERE NOT EXISTS (
   SELECT 1 FROM public.services sv WHERE sv.barbershop_id = b.id
 );
 
--- Kit inicial de estoque
-INSERT INTO public.products (barbershop_id, name, category, stock, max_stock, unit, cost)
-SELECT b.id, p.name, p.category, p.stock, p.max_stock, p.unit, p.cost
-FROM public.barbershops b
-CROSS JOIN (VALUES
-  ('Pomada Matte',         'Finalizador',  8,  120, 'un', 45::numeric),
-  ('Óleo de Barba',        'Barba',        3,  100, 'un', 38::numeric),
-  ('Shampoo Profissional', 'Cabelo',       12, 150, 'un', 55::numeric),
-  ('Navalha Descartável',  'Instrumental', 45, 500, 'cx', 12::numeric),
-  ('Cera Modeladora',      'Finalizador',  2,  80,  'un', 42::numeric),
-  ('Condicionador',        'Cabelo',       7,  120, 'un', 48::numeric)
-) AS p(name, category, stock, max_stock, unit, cost)
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.products pr WHERE pr.barbershop_id = b.id
-);
+-- (O antigo "kit inicial de estoque" foi removido de propósito: barbearia
+-- nova nasce com o estoque VAZIO — o dono cadastra os insumos reais dele.
+-- Dados fictícios são papel do scripts/seed-demo-data.mjs, só na demo.)
 
 
 -- ─────────────────────────────────────────────────────────────────────────
@@ -402,7 +411,7 @@ DECLARE
   t TEXT;
   pol RECORD;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['profiles', 'barbershops', 'bookings', 'products', 'services']
+  FOREACH t IN ARRAY ARRAY['profiles', 'barbershops', 'bookings', 'products', 'services', 'stock_movements']
   LOOP
     FOR pol IN
       SELECT policyname FROM pg_policies
@@ -413,11 +422,12 @@ BEGIN
   END LOOP;
 END $$;
 
-ALTER TABLE public.profiles    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.barbershops ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bookings    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.services    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.barbershops     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookings        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.services        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stock_movements ENABLE ROW LEVEL SECURITY;
 
 -- ── profiles ─────────────────────────────────────────────────────────────
 CREATE POLICY "read own profile" ON public.profiles
@@ -563,6 +573,18 @@ CREATE POLICY "owner manages services" ON public.services
     )
   );
 
+-- ── stock_movements (livro-caixa de insumos) ─────────────────────────────
+CREATE POLICY "staff read shop movements" ON public.stock_movements
+  FOR SELECT USING (barbershop_id = public.get_my_barbershop_id());
+
+-- Barbeiro registra consumo, dono registra compra — sempre em nome próprio
+-- e na própria barbearia. Sem UPDATE/DELETE: o histórico não se reescreve.
+CREATE POLICY "staff insert shop movements" ON public.stock_movements
+  FOR INSERT WITH CHECK (
+    barbershop_id = public.get_my_barbershop_id()
+    AND profile_id = auth.uid()
+  );
+
 -- Obs.: o modo somente-leitura das contas demo NÃO faz parte deste script —
 -- ele é opcional e vive em supabase/demo_readonly.sql (e _off.sql para
 -- destravar). Assim rodar o setup de novo nunca trava a demo sem querer.
@@ -644,19 +666,19 @@ CREATE POLICY "avatars owner writes shop" ON storage.objects
 
 SELECT 'tabelas' AS item,
        count(*)::text AS resultado,
-       'esperado: 5' AS esperado
+       'esperado: 6' AS esperado
 FROM information_schema.tables
 WHERE table_schema = 'public'
-  AND table_name IN ('barbershops', 'profiles', 'bookings', 'products', 'services')
+  AND table_name IN ('barbershops', 'profiles', 'bookings', 'products', 'services', 'stock_movements')
 
 UNION ALL
 
 SELECT 'policies',
        count(*)::text,
-       'esperado: 19'
+       'esperado: 21'
 FROM pg_policies
 WHERE schemaname = 'public'
-  AND tablename IN ('profiles', 'barbershops', 'bookings', 'products', 'services')
+  AND tablename IN ('profiles', 'barbershops', 'bookings', 'products', 'services', 'stock_movements')
 
 UNION ALL
 

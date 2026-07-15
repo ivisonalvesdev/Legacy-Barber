@@ -17,6 +17,7 @@ import { BarberInsumosView }      from './components/dashboard/BarberInsumosView
 import { ProfileView }            from './components/dashboard/ProfileView'
 import { AdminDashboardView }     from './components/dashboard/AdminDashboardView'
 import { AdminBarbeariaView }     from './components/dashboard/AdminBarbeariaView'
+import { AdminServicosView }      from './components/dashboard/AdminServicosView'
 import { AdminEstoqueView }       from './components/dashboard/AdminEstoqueView'
 import { AdminEquipeView }        from './components/dashboard/AdminEquipeView'
 import { AdminRelatoriosView }    from './components/dashboard/AdminRelatoriosView'
@@ -140,6 +141,7 @@ export default function App() {
       : <BarberView user={currentUser} />
     ) : (
       tab === 'barbearia'    ? <AdminBarbeariaView user={currentUser} onUpdate={setUser} />
+      : tab === 'servicos'   ? <AdminServicosView user={currentUser} />
       : tab === 'estoque'    ? <AdminEstoqueView user={currentUser} />
       : tab === 'equipe'     ? <AdminEquipeView user={currentUser} />
       : tab === 'relatorios' ? <AdminRelatoriosView user={currentUser} />

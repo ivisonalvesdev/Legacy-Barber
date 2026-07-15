@@ -51,6 +51,7 @@ export interface Service {
   price:       number
   emoji:       string
   popular:     boolean
+  active:      boolean
 }
 
 export interface Product {
@@ -61,4 +62,15 @@ export interface Product {
   maxStock: number
   unit:     string
   cost:     number
+}
+
+/** Linha do livro-caixa de insumos: compra ('in') ou consumo ('out'). */
+export interface StockMovement {
+  id:          string
+  productId:   string | null
+  productName: string
+  type:        'in' | 'out'
+  qty:         number
+  unitCost:    number
+  createdAt:   string
 }

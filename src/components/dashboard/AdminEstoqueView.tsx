@@ -32,8 +32,28 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
   const [saving, setSaving]   = useState(false)
   const [newItem, setNewItem] = useState({ name: '', category: 'Finalizador', stock: '', max: '', cost: '' })
   const [qtys, setQtys]       = useState<Record<string, string>>({})
+  const [costEdit, setCostEdit] = useState<{ id: string; value: string } | null>(null)
 
   const getQty = (id: string) => Math.max(1, parseInt(qtys[id] ?? '1', 10) || 1)
+
+  // Livro-caixa: toda mudança de estoque vira compra (in) ou consumo (out),
+  // com o custo unitário do momento — é daqui que o Relatório tira o que
+  // entra e o que sai. Falhar o registro não desfaz o ajuste (o estoque é a
+  // fonte da verdade do presente; o ledger, do histórico).
+  const logMovement = (item: Product, type: 'in' | 'out', qty: number) => {
+    if (!user.barbershopId || qty <= 0) return
+    supabase.from('stock_movements').insert({
+      barbershop_id: user.barbershopId,
+      product_id:    item.id,
+      product_name:  item.name,
+      profile_id:    user.id,
+      type,
+      qty,
+      unit_cost:     item.cost,
+    }).then(({ error }) => {
+      if (error) console.warn('[stock_movements]', error.message)
+    })
+  }
 
   const load = useCallback(async () => {
     if (!user.barbershopId) { setLoading(false); return }
@@ -65,7 +85,20 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
     const newStock = Math.max(0, Math.min(item.maxStock, item.stock + delta * qty))
     if (newStock === item.stock) return
     const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', item.id)
-    if (!error) setInv(p => p.map(i => i.id === item.id ? { ...i, stock: newStock } : i))
+    if (!error) {
+      setInv(p => p.map(i => i.id === item.id ? { ...i, stock: newStock } : i))
+      // qty efetiva pode ser menor que a pedida (clamp em 0 e no máximo)
+      logMovement(item, delta > 0 ? 'in' : 'out', Math.abs(newStock - item.stock))
+    }
+  }
+
+  // Custo de reposição muda com o fornecedor — editável direto na tabela.
+  const saveCost = async (item: Product, raw: string) => {
+    setCostEdit(null)
+    const cost = Number(raw.replace(',', '.'))
+    if (!(cost >= 0) || cost === item.cost) return
+    const { error } = await supabase.from('products').update({ cost }).eq('id', item.id)
+    if (!error) setInv(p => p.map(i => i.id === item.id ? { ...i, cost } : i))
   }
 
   const addItem = async () => {
@@ -86,10 +119,13 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
       .single()
     setSaving(false)
     if (error || !data) return
-    setInv(p => [{
+    const added: Product = {
       id: data.id, name: data.name, category: data.category,
       stock: data.stock, maxStock: data.max_stock, unit: data.unit, cost: Number(data.cost),
-    }, ...p])
+    }
+    setInv(p => [added, ...p])
+    // O estoque inicial também foi comprado — entra no caixa como compra
+    logMovement(added, 'in', added.stock)
     setNewItem({ name: '', category: 'Finalizador', stock: '', max: '', cost: '' })
     setShowAdd(false)
   }
@@ -221,8 +257,31 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
                     <td className="px-5 py-3.5">
                       <StockBar pct={pct} color={barColor} />
                     </td>
-                    <td className="px-5 py-3.5 font-mono" style={{ fontSize: '13px', color: 'rgba(113,113,122,0.55)' }}>
-                      R$ {item.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <td className="px-5 py-3.5 font-mono" style={{ fontSize: '13px' }}>
+                      {costEdit?.id === item.id ? (
+                        <input autoFocus value={costEdit.value} inputMode="decimal"
+                          onChange={e => setCostEdit({ id: item.id, value: e.target.value })}
+                          onBlur={() => saveCost(item, costEdit.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveCost(item, costEdit.value)
+                            if (e.key === 'Escape') setCostEdit(null)
+                          }}
+                          className="font-mono outline-none"
+                          style={{
+                            width: '72px', height: '28px', fontSize: '12px', padding: '0 8px',
+                            background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.35)',
+                            borderRadius: '8px', color: 'rgba(255,255,255,0.85)',
+                          }} />
+                      ) : (
+                        <button title="Clique para editar o custo"
+                          onClick={() => setCostEdit({ id: item.id, value: String(item.cost).replace('.', ',') })}
+                          className="transition-colors"
+                          style={{ color: 'rgba(113,113,122,0.55)', borderBottom: '1px dashed rgba(113,113,122,0.35)' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = '#D4AF37')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(113,113,122,0.55)')}>
+                          R$ {item.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </button>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1">

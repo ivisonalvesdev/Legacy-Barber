@@ -34,7 +34,7 @@ const ACCOUNTS = {
     email:    'admin.demo@legacybarber.com',
     password: 'Demo@2024',
     meta: { name: 'Admin Demo', role: 'admin', phone: '11999990010' },
-    shopName: 'Legacy Barber Demo',
+    shopName: 'Limabarber',
   },
   barberDemo: {
     email:    'barber.demo@legacybarber.com',

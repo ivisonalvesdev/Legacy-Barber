@@ -248,6 +248,7 @@ export function ClientView({ user }: ClientViewProps) {
           price:       Number(s.price),
           emoji:       s.emoji,
           popular:     s.popular,
+          active:      true, // a query acima já filtra .eq('active', true)
         })))
       })
   }, [selShop])

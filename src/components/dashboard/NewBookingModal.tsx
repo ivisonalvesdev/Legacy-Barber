@@ -51,6 +51,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
           : data.map(s => ({
               id: s.id, name: s.name, durationMin: s.duration_min,
               price: Number(s.price), emoji: s.emoji, popular: s.popular,
+              active: true, // a query acima já filtra .eq('active', true)
             }))
         setServices(list)
         if (list.length > 0) setServiceId(prev => prev || list[0].id)

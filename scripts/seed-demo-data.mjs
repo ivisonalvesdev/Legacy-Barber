@@ -33,6 +33,9 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 const OWNER_EMAIL   = 'admin.demo@legacybarber.com'
 const DEMO_PASSWORD = 'Demo@2024'
 const MONTHS_BACK   = 6
+// Nome do mostruário: a barbearia demo é a "Limabarber" — todas as contas
+// demo vivem dentro dela. Re-rodar o seed sempre reforça o nome.
+const SHOP_NAME     = 'Limabarber'
 
 // Espelha src/data/defaults.ts — a ocupação do dashboard divide por isto.
 const TIME_SLOTS = [
@@ -49,7 +52,7 @@ const BARBERS = [
 // Endereço da barbearia principal — sem ele a busca do cliente não a encontra
 // e o dono não consegue publicar.
 const MAIN_ADDRESS = {
-  description:      'Barbearia clássica no coração da Consolação, desde 2015.',
+  description:      'A Limabarber é referência em corte e barba na Consolação desde 2015.',
   phone:            '(11) 3255-8800',
   address_street:   'Rua Augusta',
   address_number:   '1200',
@@ -209,8 +212,11 @@ async function main() {
     process.exit(1)
   }
 
+  // order + limit determinístico: se houver duplicata do mesmo dono, pega a
+  // mais antiga (a original, que carrega o histórico) — nunca uma vazia.
   const { data: shop, error: shopErr } = await admin
-    .from('barbershops').select('id, name').eq('owner_id', owner.id).limit(1).maybeSingle()
+    .from('barbershops').select('id, name').eq('owner_id', owner.id)
+    .order('created_at', { ascending: true }).limit(1).maybeSingle()
   if (shopErr) throw new Error(`barbershops: ${shopErr.message}`)
   if (!shop) {
     console.error('❌  Barbearia demo não encontrada. Rode create-demo-users.mjs primeiro.\n')
@@ -218,11 +224,11 @@ async function main() {
   }
   const shopId = shop.id
 
-  // Endereço + published: sem isso a barbearia não aparece na busca do cliente
+  // Nome + endereço + published: sem isso a barbearia não aparece na busca
   const { error: addrErr } = await admin.from('barbershops')
-    .update({ ...MAIN_ADDRESS, published: true }).eq('id', shopId)
+    .update({ name: SHOP_NAME, ...MAIN_ADDRESS, published: true }).eq('id', shopId)
   if (addrErr) throw new Error(`endereço da barbearia: ${addrErr.message}`)
-  console.log(`🏪  Barbearia: "${shop.name}" — publicada`)
+  console.log(`🏪  Barbearia: "${SHOP_NAME}" — publicada`)
 
   // ── 2. Equipe ─────────────────────────────────────────────────
   const barberIds = []
@@ -289,11 +295,66 @@ async function main() {
   }
 
   // ── 5. Estoque ────────────────────────────────────────────────
+  // Movements primeiro: são o histórico dos produtos que vamos recriar
+  await admin.from('stock_movements').delete().eq('barbershop_id', shopId)
   await admin.from('products').delete().eq('barbershop_id', shopId)
-  const { error: prodErr } = await admin.from('products')
+  const { data: prods, error: prodErr } = await admin.from('products')
     .insert(STOCK.map(p => ({ ...p, barbershop_id: shopId })))
+    .select('id, name, cost, max_stock')
   if (prodErr) throw new Error(`products: ${prodErr.message}`)
   console.log(`📦  Estoque: ${STOCK.length} produtos`)
+
+  // ── 5b. Livro-caixa de insumos (6 meses de compras × consumo) ──
+  // Alimenta a seção "Insumos — entra × sai" e o lucro estimado dos
+  // Relatórios. Compras crescem junto com o movimento da barbearia;
+  // consumo fica em ~70–95% do comprado (estoque acumula um pouco).
+  const seedStart = new Date(); seedStart.setHours(0, 0, 0, 0)
+  seedStart.setMonth(seedStart.getMonth() - MONTHS_BACK)
+
+  const movRows = []
+  for (let m = 0; m < MONTHS_BACK; m++) {
+    const mStart   = new Date(seedStart.getFullYear(), seedStart.getMonth() + m, 1)
+    const mDays    = new Date(mStart.getFullYear(), mStart.getMonth() + 1, 0).getDate()
+    const progress = m / (MONTHS_BACK - 1)
+    const growth   = 0.55 + 0.45 * progress
+
+    for (const p of prods) {
+      // 1–2 compras no mês (reposição quinzenal quando o movimento cresce)
+      const buys   = growth > 0.8 ? 2 : 1
+      let boughtQty = 0
+      for (let b = 0; b < buys; b++) {
+        const qty = Math.max(4, Math.round(randInt(10, 22) * growth))
+        boughtQty += qty
+        const day = randInt(1 + b * 14, Math.min(mDays, 14 + b * 14))
+        const at  = new Date(mStart.getFullYear(), mStart.getMonth(), day, randInt(9, 18), randInt(0, 59))
+        movRows.push({
+          barbershop_id: shopId, product_id: p.id, product_name: p.name,
+          profile_id: owner.id, type: 'in', qty, unit_cost: Number(p.cost),
+          created_at: at.toISOString(),
+        })
+      }
+
+      // Consumo espalhado pelo mês, em baixas de 1–3 unidades
+      let toConsume = Math.round(boughtQty * (0.7 + rnd() * 0.25))
+      while (toConsume > 0) {
+        const qty = Math.min(toConsume, randInt(1, 3))
+        toConsume -= qty
+        const day = randInt(1, mDays)
+        const at  = new Date(mStart.getFullYear(), mStart.getMonth(), day, randInt(8, 19), randInt(0, 59))
+        movRows.push({
+          barbershop_id: shopId, product_id: p.id, product_name: p.name,
+          profile_id: pick(barberIds), type: 'out', qty, unit_cost: Number(p.cost),
+          created_at: at.toISOString(),
+        })
+      }
+    }
+  }
+  for (let i = 0; i < movRows.length; i += 500) {
+    const { error } = await admin.from('stock_movements').insert(movRows.slice(i, i + 500))
+    if (error) throw new Error(`stock_movements: ${error.message}`)
+  }
+  const spent = movRows.filter(r => r.type === 'in').reduce((s, r) => s + r.qty * r.unit_cost, 0)
+  console.log(`🧾  Livro-caixa: ${movRows.length} movimentações · R$ ${Math.round(spent).toLocaleString('pt-BR')} em compras`)
 
   // ── 6. Agendamentos ───────────────────────────────────────────
   await admin.from('bookings').delete().eq('barbershop_id', shopId)
@@ -365,9 +426,10 @@ async function main() {
   const revTotal    = rows.filter(r => r.status === 'done').reduce((s, r) => s + r.service_price, 0)
 
   console.log('\n\n' + '═'.repeat(58))
-  console.log('  ✅  SEED CONCLUÍDO\n')
+  console.log(`  ✅  SEED CONCLUÍDO — mostruário "${SHOP_NAME}"\n`)
   console.log(`  📅  Agendamentos ....... ${rows.length} (${MONTHS_BACK} meses)`)
   console.log(`  💰  Receita histórica .. R$ ${revTotal.toLocaleString('pt-BR')}`)
+  console.log(`  🧾  Livro-caixa ........ ${movRows.length} movimentações de insumos`)
   console.log(`  📊  Hoje ............... ${todayRows.length} atend. · ${occupation}% ocupação`)
   console.log(`  💵  Faturamento hoje ... R$ ${revToday.toLocaleString('pt-BR')}`)
   console.log(`  🏪  Barbearias na busca  ${SHOWCASE.length + 1}\n`)
