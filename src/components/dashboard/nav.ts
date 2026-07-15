@@ -1,5 +1,5 @@
 import type { ElementType } from 'react'
-import { Calendar, Clock, User, Package, Users, LayoutDashboard, BarChart2 } from 'lucide-react'
+import { Calendar, Clock, User, Package, Users, LayoutDashboard, BarChart2, Store } from 'lucide-react'
 import type { UserRole } from '../../types'
 
 export const NAV_MAP: Record<UserRole, { id: string; label: string; icon: ElementType }[]> = {
@@ -15,6 +15,7 @@ export const NAV_MAP: Record<UserRole, { id: string; label: string; icon: Elemen
   ],
   admin: [
     { id: 'dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
+    { id: 'barbearia',  label: 'Barbearia',  icon: Store           },
     { id: 'estoque',    label: 'Estoque',    icon: Package         },
     { id: 'equipe',     label: 'Equipe',     icon: Users           },
     { id: 'relatorios', label: 'Relatórios', icon: BarChart2       },

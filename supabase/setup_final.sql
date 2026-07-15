@@ -10,10 +10,28 @@
 --   2. Cole ESTE ARQUIVO INTEIRO (do início ao fim)
 --   3. Clique em Run
 --   4. A última query mostra um resumo de verificação
+--
+-- Cria também o bucket de imagens (fotos de perfil e logo) e as policies de
+-- Storage — não é preciso configurar nada pelo Dashboard.
 -- ═══════════════════════════════════════════════════════════════════════
 
 -- Evita validação antecipada do corpo de funções SQL (ordem-independente)
 SET check_function_bodies = off;
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 0. BUSCA DE BARBEARIAS — normalização de acentos
+-- ─────────────────────────────────────────────────────────────────────────
+
+-- Tira acentos e caixa para que "cabeleireiro jose" ache "Cabeleireiro José".
+-- translate() em vez da extensão unaccent: é IMMUTABLE de verdade (logo pode
+-- alimentar coluna gerada e índice) e não depende de dicionário instalado.
+-- O front normaliza o termo digitado do mesmo jeito antes de consultar.
+CREATE OR REPLACE FUNCTION public.normalize_search(TEXT)
+RETURNS TEXT LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE AS $$
+  SELECT lower(translate($1,
+    'áàâãäéèêëíìîïóòôõöúùûüñçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÑÇ',
+    'aaaaaeeeeiiiiooooouuuuncAAAAAEEEEIIIIOOOOOUUUUNC'))
+$$;
 
 -- ⚠️ APENAS se você tinha tabelas antigas de TESTE chamadas products/services
 --    (de experimentos anteriores, sem relação com este app), descomente:
@@ -32,6 +50,18 @@ CREATE TABLE IF NOT EXISTS public.barbershops (
   invite_code TEXT        UNIQUE NOT NULL
               DEFAULT     upper(left(replace(gen_random_uuid()::text, '-', ''), 6)),
   plan        TEXT        NOT NULL DEFAULT 'basic',
+  -- Vitrine: o cliente escolhe a barbearia por nome/endereço antes do barbeiro
+  description      TEXT,
+  phone            TEXT,
+  logo_url         TEXT,
+  address_street   TEXT,
+  address_number   TEXT,
+  address_district TEXT,
+  address_city     TEXT,
+  address_state    TEXT,
+  address_zip      TEXT,
+  -- Só aparece para clientes depois que o dono completa o cadastro
+  published   BOOLEAN     NOT NULL DEFAULT false,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -41,7 +71,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   phone         TEXT        NOT NULL DEFAULT '',
   role          TEXT        NOT NULL DEFAULT 'client',
   specialty     TEXT,
-  avatar        TEXT        NOT NULL DEFAULT '',
+  avatar        TEXT        NOT NULL DEFAULT '',  -- iniciais (fallback visual)
+  avatar_url    TEXT,                             -- foto no Storage; NULL → usa as iniciais
   barbershop_id UUID        REFERENCES public.barbershops(id) ON DELETE SET NULL,
   active        BOOLEAN     NOT NULL DEFAULT true,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -96,9 +127,32 @@ CREATE TABLE IF NOT EXISTS public.services (
 ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS owner_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS invite_code TEXT DEFAULT upper(left(replace(gen_random_uuid()::text, '-', ''), 6));
 ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS plan        TEXT NOT NULL DEFAULT 'basic';
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS description      TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS phone            TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS logo_url         TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS address_street   TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS address_number   TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS address_district TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS address_city     TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS address_state    TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS address_zip      TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS published        BOOLEAN NOT NULL DEFAULT false;
 UPDATE public.barbershops
   SET invite_code = upper(left(replace(gen_random_uuid()::text, '-', ''), 6))
   WHERE invite_code IS NULL;
+
+-- Coluna gerada que concentra o texto pesquisável (nome + bairro + cidade + UF)
+-- já sem acento. STORED = calculada na escrita, então a busca só lê e usa índice.
+-- Precisa vir DEPOIS das colunas de endereço acima.
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS search_text TEXT
+  GENERATED ALWAYS AS (
+    public.normalize_search(
+      coalesce(name, '')             || ' ' ||
+      coalesce(address_district, '') || ' ' ||
+      coalesce(address_city, '')     || ' ' ||
+      coalesce(address_state, '')
+    )
+  ) STORED;
 
 -- profiles
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name          TEXT NOT NULL DEFAULT 'Usuário';
@@ -106,6 +160,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone         TEXT NOT NULL
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role          TEXT NOT NULL DEFAULT 'client';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS specialty     TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar        TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url    TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS barbershop_id UUID REFERENCES public.barbershops(id) ON DELETE SET NULL;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS active        BOOLEAN NOT NULL DEFAULT true;
 
@@ -148,6 +203,19 @@ CREATE INDEX IF NOT EXISTS bookings_barbershop_date_idx ON public.bookings (barb
 CREATE INDEX IF NOT EXISTS bookings_client_idx          ON public.bookings (client_id);
 CREATE INDEX IF NOT EXISTS products_shop_idx            ON public.products (barbershop_id);
 CREATE INDEX IF NOT EXISTS services_shop_idx            ON public.services (barbershop_id);
+CREATE INDEX IF NOT EXISTS profiles_shop_role_idx       ON public.profiles (barbershop_id, role);
+
+-- Busca da vitrine: ILIKE '%termo%' não usa índice B-tree comum, por isso o
+-- índice de trigramas. É otimização — se pg_trgm não estiver disponível, a
+-- busca continua correta (só varre a tabela, aceitável nesta escala).
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+DO $$
+BEGIN
+  CREATE INDEX IF NOT EXISTS barbershops_search_idx
+    ON public.barbershops USING GIN (search_text gin_trgm_ops);
+EXCEPTION WHEN undefined_object OR insufficient_privilege THEN
+  RAISE NOTICE 'pg_trgm indisponível — busca segue funcionando sem índice.';
+END $$;
 
 -- Remove duplicatas existentes (mantém o agendamento mais antigo de cada slot)
 DELETE FROM public.bookings a
@@ -189,6 +257,50 @@ SET search_path = public AS $$
     SELECT 1 FROM auth.users
     WHERE id = auth.uid()
       AND email LIKE '%.demo@legacybarber.com'
+  )
+$$;
+
+-- Valida o código de convite no cadastro do barbeiro, devolvendo só id e nome.
+-- Roda anônima (antes do signUp) e nunca expõe o código de volta.
+CREATE OR REPLACE FUNCTION public.find_shop_by_invite(p_code TEXT)
+RETURNS TABLE (id UUID, name TEXT)
+LANGUAGE SQL SECURITY DEFINER STABLE
+SET search_path = public AS $$
+  SELECT b.id, b.name FROM public.barbershops b
+  WHERE b.invite_code = upper(trim(p_code))
+  LIMIT 1
+$$;
+
+-- Único caminho para ler um invite_code, e só o do próprio dono.
+CREATE OR REPLACE FUNCTION public.my_invite_code()
+RETURNS TEXT LANGUAGE SQL SECURITY DEFINER STABLE
+SET search_path = public AS $$
+  SELECT invite_code FROM public.barbershops WHERE owner_id = auth.uid() LIMIT 1
+$$;
+
+-- Barbearia à qual um barbeiro pertence. Usada no WITH CHECK do agendamento
+-- para impedir que o cliente monte um booking com barbeiro de uma barbearia e
+-- barbershop_id de outra (o front deriva certo, mas a API aceitaria na mão).
+-- SECURITY DEFINER: a checagem não pode depender do que o cliente enxerga.
+CREATE OR REPLACE FUNCTION public.barber_shop_id(p_barber UUID)
+RETURNS UUID LANGUAGE SQL SECURITY DEFINER STABLE
+SET search_path = public AS $$
+  SELECT barbershop_id FROM public.profiles
+  WHERE id = p_barber AND role = 'barber' AND active
+$$;
+
+-- Confere que nome e preço batem com um serviço ativo do catálogo da barbearia.
+-- Sem isto o cliente escolhe o preço que quiser via API e distorce o
+-- faturamento do dono — o valor nunca deve vir de quem paga.
+CREATE OR REPLACE FUNCTION public.service_matches(p_shop UUID, p_name TEXT, p_price NUMERIC)
+RETURNS BOOLEAN LANGUAGE SQL SECURITY DEFINER STABLE
+SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.services
+    WHERE barbershop_id = p_shop
+      AND name  = p_name
+      AND price = p_price
+      AND active
   )
 $$;
 
@@ -335,13 +447,46 @@ CREATE POLICY "owner updates shop profiles" ON public.profiles
   );
 
 -- ── barbershops ──────────────────────────────────────────────────────────
-CREATE POLICY "public read barbershops" ON public.barbershops
-  FOR SELECT USING (true);
+-- Vitrine: só barbearia publicada aparece na busca do cliente. O dono
+-- continua enxergando a própria (policy abaixo) mesmo antes de publicar, e o
+-- barbeiro precisa ler a dele para validar o código de convite no cadastro.
+CREATE POLICY "read published barbershops" ON public.barbershops
+  FOR SELECT USING (
+    published
+    OR owner_id = auth.uid()
+    OR id = public.get_my_barbershop_id()
+  );
 
 CREATE POLICY "owner manage barbershop" ON public.barbershops
   FOR ALL
   USING      (owner_id = auth.uid())
   WITH CHECK (owner_id = auth.uid());
+
+-- ⚠️ Escalonamento de privilégio: a vitrine é pública, e RLS filtra LINHAS,
+-- não COLUNAS. Sem isto, qualquer um lê o invite_code de qualquer barbearia e
+-- se cadastra como barbeiro dela — ganhando agenda e estoque. Quem precisa do
+-- código usa find_shop_by_invite() (cadastro) ou my_invite_code() (dono).
+--
+-- "REVOKE SELECT (invite_code)" sozinho NÃO funciona: no Postgres o privilégio
+-- de tabela se sobrepõe ao de coluna, e o Supabase concede SELECT na tabela
+-- inteira para anon/authenticated por padrão. O revoke de coluna vira no-op
+-- silencioso. É preciso tirar o SELECT da TABELA e reconceder coluna a coluna.
+--
+-- A lista é montada por consulta (deny-list) em vez de escrita à mão: coluna
+-- nova entra sozinha e o app não quebra ao adicionar campo na vitrine. Para
+-- esconder outro campo no futuro, some-o ao NOT IN.
+DO $$
+DECLARE cols TEXT;
+BEGIN
+  SELECT string_agg(quote_ident(attname), ', ' ORDER BY attnum) INTO cols
+  FROM pg_attribute
+  WHERE attrelid = 'public.barbershops'::regclass
+    AND attnum > 0 AND NOT attisdropped
+    AND attname NOT IN ('invite_code');
+
+  REVOKE SELECT ON public.barbershops FROM anon, authenticated;
+  EXECUTE format('GRANT SELECT (%s) ON public.barbershops TO anon, authenticated', cols);
+END $$;
 
 -- ── bookings ─────────────────────────────────────────────────────────────
 CREATE POLICY "staff see shop bookings" ON public.bookings
@@ -357,8 +502,16 @@ CREATE POLICY "staff insert shop bookings" ON public.bookings
 CREATE POLICY "client see own bookings" ON public.bookings
   FOR SELECT USING (client_id = auth.uid());
 
+-- O cliente monta o payload inteiro, então o banco confere o que ele não pode
+-- escolher: que o barbeiro realmente trabalha na barbearia informada e que o
+-- preço é o do catálogo. Sem isso dá para agendar com barbeiro de outra
+-- barbearia ou por R$ 0 chamando a API direto.
 CREATE POLICY "client insert bookings" ON public.bookings
-  FOR INSERT WITH CHECK (client_id = auth.uid());
+  FOR INSERT WITH CHECK (
+    client_id     = auth.uid()
+    AND barbershop_id = public.barber_shop_id(barber_id)
+    AND public.service_matches(barbershop_id, service_name, service_price)
+  );
 
 -- Cliente só pode alterar o próprio agendamento E somente para cancelar
 CREATE POLICY "client cancel own bookings" ON public.bookings
@@ -410,32 +563,83 @@ CREATE POLICY "owner manages services" ON public.services
     )
   );
 
--- ── MODO SOMENTE-LEITURA PARA CONTAS DEMO ────────────────────────────────
--- Policies RESTRICTIVE: são combinadas com AND sobre TODAS as permissivas
--- acima, então bloqueiam INSERT/UPDATE/DELETE das contas demo em todas as
--- tabelas SEM tocar no SELECT — os dados mock ficam só para visualização.
--- Para contas normais, is_demo_user() é false e nada muda.
--- 3 policies (insert/update/delete) × 5 tabelas = 15 policies restritivas.
-DO $$
-DECLARE t TEXT;
-BEGIN
-  FOREACH t IN ARRAY ARRAY['profiles', 'barbershops', 'bookings', 'products', 'services']
-  LOOP
-    EXECUTE format(
-      'CREATE POLICY "demo readonly no insert" ON public.%I '
-      'AS RESTRICTIVE FOR INSERT WITH CHECK (NOT public.is_demo_user())', t);
-    EXECUTE format(
-      'CREATE POLICY "demo readonly no update" ON public.%I '
-      'AS RESTRICTIVE FOR UPDATE USING (NOT public.is_demo_user())', t);
-    EXECUTE format(
-      'CREATE POLICY "demo readonly no delete" ON public.%I '
-      'AS RESTRICTIVE FOR DELETE USING (NOT public.is_demo_user())', t);
-  END LOOP;
-END $$;
+-- Obs.: o modo somente-leitura das contas demo NÃO faz parte deste script —
+-- ele é opcional e vive em supabase/demo_readonly.sql (e _off.sql para
+-- destravar). Assim rodar o setup de novo nunca trava a demo sem querer.
 
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 7. VERIFICAÇÃO FINAL — rode e confira o resultado
+-- 7. STORAGE — fotos de perfil e logo da barbearia
+-- ─────────────────────────────────────────────────────────────────────────
+
+-- Bucket público na leitura (a foto aparece para qualquer visitante) e
+-- limitado a 2 MB / imagens — o limite vive aqui porque validação de front
+-- não impede upload direto pela API.
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('avatars', 'avatars', true, 2097152,
+        ARRAY['image/jpeg', 'image/png', 'image/webp'])
+ON CONFLICT (id) DO UPDATE
+  SET public             = EXCLUDED.public,
+      file_size_limit    = EXCLUDED.file_size_limit,
+      allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- Caminhos: users/{user_id}/…  e  shops/{barbershop_id}/…
+-- A pasta é o dono do arquivo; storage.foldername() lê esse prefixo.
+DO $$
+DECLARE pol RECORD;
+BEGIN
+  FOR pol IN
+    SELECT policyname FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+      AND policyname IN ('avatars public read', 'avatars user writes own',
+                         'avatars owner writes shop')
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON storage.objects', pol.policyname);
+  END LOOP;
+END $$;
+
+CREATE POLICY "avatars public read" ON storage.objects
+  FOR SELECT USING (bucket_id = 'avatars');
+
+-- Cada usuário só escreve dentro da própria pasta
+CREATE POLICY "avatars user writes own" ON storage.objects
+  FOR ALL
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = 'users'
+    AND (storage.foldername(name))[2] = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = 'users'
+    AND (storage.foldername(name))[2] = auth.uid()::text
+  );
+
+-- Logo da barbearia: só o dono dela
+CREATE POLICY "avatars owner writes shop" ON storage.objects
+  FOR ALL
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = 'shops'
+    AND EXISTS (
+      SELECT 1 FROM public.barbershops b
+      WHERE b.id::text = (storage.foldername(name))[2]
+        AND b.owner_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = 'shops'
+    AND EXISTS (
+      SELECT 1 FROM public.barbershops b
+      WHERE b.id::text = (storage.foldername(name))[2]
+        AND b.owner_id = auth.uid()
+    )
+  );
+
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 8. VERIFICAÇÃO FINAL — rode e confira o resultado
 -- ─────────────────────────────────────────────────────────────────────────
 
 SELECT 'tabelas' AS item,
@@ -449,10 +653,38 @@ UNION ALL
 
 SELECT 'policies',
        count(*)::text,
-       'esperado: 34'  -- 19 permissivas + 15 restritivas (somente-leitura demo)
+       'esperado: 19'
 FROM pg_policies
 WHERE schemaname = 'public'
   AND tablename IN ('profiles', 'barbershops', 'bookings', 'products', 'services')
+
+UNION ALL
+
+SELECT 'bucket de imagens',
+       count(*)::text,
+       'esperado: 1'
+FROM storage.buckets WHERE id = 'avatars'
+
+UNION ALL
+
+SELECT 'policies do storage',
+       count(*)::text,
+       'esperado: 3'
+FROM pg_policies
+WHERE schemaname = 'storage' AND tablename = 'objects'
+  AND policyname LIKE 'avatars %'
+
+UNION ALL
+
+-- Confere o fechamento do escalonamento de privilégio: nenhum dos dois papéis
+-- pode ler invite_code direto da tabela.
+SELECT 'invite_code protegido',
+       CASE WHEN count(*) = 0 THEN 'sim' ELSE 'NÃO — revogue!' END,
+       'esperado: sim'
+FROM information_schema.column_privileges
+WHERE table_schema = 'public' AND table_name = 'barbershops'
+  AND column_name = 'invite_code' AND privilege_type = 'SELECT'
+  AND grantee IN ('anon', 'authenticated')
 
 UNION ALL
 

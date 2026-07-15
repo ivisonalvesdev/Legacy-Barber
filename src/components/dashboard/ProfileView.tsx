@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { User, Phone, Scissors, Check, Building2, Mail } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
+import { Avatar } from '../ui/Avatar'
+import { ImageUpload } from '../ui/ImageUpload'
 
 interface ProfileViewProps {
   user: AppUser
@@ -16,6 +18,15 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(false)
   const [error, setError]         = useState('')
+
+  // A foto salva sozinha, sem depender do botão do formulário: o upload já é
+  // uma ação concluída e seria estranho perdê-la ao sair sem salvar.
+  const saveAvatar = async (url: string | null) => {
+    const { error: err } = await supabase.from('profiles')
+      .update({ avatar_url: url }).eq('id', user.id)
+    if (err) { setError('Erro ao salvar a foto.'); return }
+    onUpdate({ ...user, avatarUrl: url ?? undefined })
+  }
 
   const dirty =
     name.trim() !== user.name ||
@@ -72,10 +83,7 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
       {/* Cartão de identidade */}
       <div className="rounded-2xl p-5 flex items-center gap-4"
         style={{ background: 'rgba(212,175,55,0.04)', border: '1px solid rgba(212,175,55,0.16)' }}>
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold flex-shrink-0"
-          style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.25)' }}>
-          {user.avatar || user.name[0]}
-        </div>
+        <Avatar url={user.avatarUrl} fallback={user.avatar || user.name} size={56} rounded="2xl" highlight />
         <div className="flex-1 min-w-0">
           <div style={{ fontWeight: 700, color: 'rgba(255,255,255,0.92)', fontSize: '16px' }} className="truncate">{user.name}</div>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -93,8 +101,18 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
       </div>
 
       {/* Formulário */}
-      <div className="rounded-2xl p-6 space-y-4"
+      <div className="rounded-2xl p-6 space-y-5"
         style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <ImageUpload
+          folder={`users/${user.id}`}
+          url={user.avatarUrl}
+          fallback={user.avatar || user.name}
+          onChange={saveAvatar}
+          size={88}
+          rounded="2xl"
+          label="Foto de perfil"
+        />
+
         <div>
           <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <Mail size={11} /> E-mail

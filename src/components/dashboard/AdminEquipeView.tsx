@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Plus, X, TrendingUp, Clock, Scissors, Copy, CheckCheck } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
+import { Avatar } from '../ui/Avatar'
 
 interface AdminEquipeViewProps {
   user: AppUser
@@ -14,6 +15,7 @@ type TeamMember = {
   specialty:         string
   rating:            number
   avatar:            string
+  avatarUrl:         string | null
   active:            boolean
   appointmentsToday: number
   revenueToday:      number
@@ -35,15 +37,13 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
 
     const load = async () => {
       const [shopRes, membersRes, bookingsRes] = await Promise.all([
-        // Código de convite
-        supabase.from('barbershops')
-          .select('invite_code')
-          .eq('id', user.barbershopId!)
-          .single(),
+        // Código de convite — via RPC: a coluna é revogada na tabela para não
+        // vazar o código de outras barbearias na vitrine pública.
+        supabase.rpc('my_invite_code'),
 
         // Barbeiros desta barbearia
         supabase.from('profiles')
-          .select('id, name, specialty, avatar, phone, active')
+          .select('id, name, specialty, avatar, avatar_url, phone, active')
           .eq('barbershop_id', user.barbershopId!)
           .eq('role', 'barber'),
 
@@ -54,7 +54,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
           .eq('date', todayISO),
       ])
 
-      if (shopRes.data) setCode(shopRes.data.invite_code)
+      if (shopRes.data) setCode(shopRes.data as string)
 
       const members = membersRes.data ?? []
       const bookings = bookingsRes.data ?? []
@@ -66,7 +66,8 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
           name:              m.name,
           specialty:         m.specialty  ?? 'Barbeiro',
           rating:            4.9,
-          avatar:            m.avatar     ?? m.name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase(),
+          avatar:            m.avatar || m.name,
+          avatarUrl:         m.avatar_url ?? null,
           active:            m.active     ?? true,
           phone:             m.phone      ?? '',
           appointmentsToday: myBookings.length,
@@ -212,10 +213,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.06)' }}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center text-[13px] font-bold"
-                        style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.2)' }}>
-                        {m.avatar}
-                      </div>
+                      <Avatar url={m.avatarUrl} fallback={m.avatar} size={44} rounded="xl" highlight />
                       <div>
                         <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>{m.name}</div>
                         <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)', marginTop: '2px' }}>
@@ -265,10 +263,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
                 className="rounded-2xl p-5 flex items-center justify-between"
                 style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', opacity: 0.6 }}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[12px] font-bold"
-                    style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(113,113,122,0.5)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    {m.avatar}
-                  </div>
+                  <Avatar url={m.avatarUrl} fallback={m.avatar} size={40} rounded="xl" />
                   <div>
                     <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.55)', fontSize: '13px' }}>{m.name}</div>
                     <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.4)' }}>{m.specialty}</div>

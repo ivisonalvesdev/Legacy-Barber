@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { Scissors, LogOut } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { NAV_MAP } from './nav'
+import { Avatar } from '../ui/Avatar'
 
 interface SidebarProps {
   user: AppUser
@@ -63,10 +64,7 @@ export function Sidebar({ user, activeTab, setActiveTab, onLogout }: SidebarProp
       {/* User */}
       <div className="px-2.5 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-            style={{ background: 'rgba(212,175,55,0.09)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.18)' }}>
-            {user.avatar}
-          </div>
+          <Avatar url={user.avatarUrl} fallback={user.avatar || user.name} size={32} rounded="xl" highlight />
           <div className="flex-1 min-w-0">
             <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '12px', fontWeight: 600 }} className="truncate">
               {user.name.split(' ')[0]}

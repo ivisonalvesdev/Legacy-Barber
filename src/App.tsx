@@ -6,6 +6,7 @@ import type { AppUser, OpenAuthFn, UserRole } from './types'
 import { supabase } from './lib/supabase'
 
 import { AmbientBackground }      from './components/ui/AmbientBackground'
+import { Avatar }                 from './components/ui/Avatar'
 import { LandingPage }            from './components/landing/LandingPage'
 import { AuthModal }              from './components/auth/AuthModal'
 import { Sidebar }                from './components/dashboard/Sidebar'
@@ -15,6 +16,7 @@ import { BarberView }             from './components/dashboard/BarberView'
 import { BarberInsumosView }      from './components/dashboard/BarberInsumosView'
 import { ProfileView }            from './components/dashboard/ProfileView'
 import { AdminDashboardView }     from './components/dashboard/AdminDashboardView'
+import { AdminBarbeariaView }     from './components/dashboard/AdminBarbeariaView'
 import { AdminEstoqueView }       from './components/dashboard/AdminEstoqueView'
 import { AdminEquipeView }        from './components/dashboard/AdminEquipeView'
 import { AdminRelatoriosView }    from './components/dashboard/AdminRelatoriosView'
@@ -57,6 +59,7 @@ export default function App() {
             barbershopName,
             specialty:      data.specialty     ?? undefined,
             avatar:         data.avatar        ?? '',
+            avatarUrl:      data.avatar_url    ?? undefined,
           })
           setTab(data.role === 'admin' ? 'dashboard' : 'agenda')
         }
@@ -136,7 +139,8 @@ export default function App() {
       : tab === 'perfil'    ? <ProfileView user={currentUser} onUpdate={setUser} />
       : <BarberView user={currentUser} />
     ) : (
-      tab === 'estoque'      ? <AdminEstoqueView user={currentUser} />
+      tab === 'barbearia'    ? <AdminBarbeariaView user={currentUser} onUpdate={setUser} />
+      : tab === 'estoque'    ? <AdminEstoqueView user={currentUser} />
       : tab === 'equipe'     ? <AdminEquipeView user={currentUser} />
       : tab === 'relatorios' ? <AdminRelatoriosView user={currentUser} />
       : <AdminDashboardView user={currentUser} />
@@ -160,10 +164,7 @@ export default function App() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
             style={{ background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.18)' }}>
-            <div className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold"
-              style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37' }}>
-              {currentUser.avatar}
-            </div>
+            <Avatar url={currentUser.avatarUrl} fallback={currentUser.avatar || currentUser.name} size={20} rounded="full" highlight />
             <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(212,175,55,0.8)' }}>
               {currentUser.name.split(' ')[0]}
             </span>

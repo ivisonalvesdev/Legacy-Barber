@@ -3,13 +3,14 @@ import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Download, Users, DollarSign, Activity } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
+import { Avatar } from '../ui/Avatar'
 
 interface AdminRelatoriosViewProps {
   user: AppUser
 }
 
 type ChartPoint = { day: string; value: number }
-type TopBarber  = { name: string; avatar: string; revenue: number; clients: number }
+type TopBarber  = { name: string; avatar: string; avatarUrl: string | null; revenue: number; clients: number }
 type SvcDist    = { name: string; pct: number; revenue: number; color: string }
 
 type Period = 'semana' | 'mes'
@@ -133,7 +134,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
       const [bookingRows, barbersRes] = await Promise.all([
         fetchDoneBookings(user.barbershopId!, iso(start6m)),
         supabase.from('profiles')
-          .select('id, name, avatar')
+          .select('id, name, avatar, avatar_url')
           .eq('barbershop_id', user.barbershopId!)
           .eq('role', 'barber'),
       ])
@@ -146,7 +147,11 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
         date:     b.date,
       }))
       const barberNames = new Map(
-        (barbersRes.data ?? []).map(b => [b.id, { name: b.name as string, avatar: (b.avatar ?? '—') as string }])
+        (barbersRes.data ?? []).map(b => [b.id, {
+          name:      b.name as string,
+          avatar:    (b.avatar || b.name || '—') as string,
+          avatarUrl: (b.avatar_url ?? null) as string | null,
+        }])
       )
 
       // ── Janelas de tempo ──────────────────────────────────────
@@ -213,10 +218,11 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
       setTopBarbers(
         [...byBarber.entries()]
           .map(([id, v]) => ({
-            name:    barberNames.get(id)?.name   ?? 'Barbeiro',
-            avatar:  barberNames.get(id)?.avatar ?? '—',
-            revenue: v.revenue,
-            clients: v.clients,
+            name:      barberNames.get(id)?.name      ?? 'Barbeiro',
+            avatar:    barberNames.get(id)?.avatar    ?? '—',
+            avatarUrl: barberNames.get(id)?.avatarUrl ?? null,
+            revenue:   v.revenue,
+            clients:   v.clients,
           }))
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, 5)
@@ -366,10 +372,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
                   style={{ color: i === 0 ? '#D4AF37' : 'rgba(113,113,122,0.4)' }}>
                   #{i + 1}
                 </div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-                  style={{ background: 'rgba(212,175,55,0.09)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.18)' }}>
-                  {b.avatar}
-                </div>
+                <Avatar url={b.avatarUrl} fallback={b.avatar} size={36} rounded="xl" highlight />
                 <div className="flex-1 min-w-0">
                   <div style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }} className="truncate">{b.name}</div>
                   <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)' }}>{b.clients} atendimento{b.clients !== 1 ? 's' : ''}</div>

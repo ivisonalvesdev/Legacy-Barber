@@ -76,6 +76,7 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
           barbershopName,
           specialty:      profile.specialty     ?? undefined,
           avatar:         profile.avatar        ?? '',
+          avatarUrl:      profile.avatar_url    ?? undefined,
         })
         return
       }
@@ -90,15 +91,15 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
       if (role === 'barber' && !form.inviteCode.trim())
         throw new Error('Insira o código da barbearia fornecido pelo proprietário.')
 
-      // Valida código de convite (antes de criar a conta)
+      // Valida código de convite (antes de criar a conta).
+      // Via RPC: a tabela não expõe invite_code, senão qualquer um leria o
+      // código de qualquer barbearia e entraria na equipe dela.
       let targetShopId: string | null = null
       let targetShopName: string | null = null
       if (role === 'barber') {
-        const { data: shop, error: shopErr } = await supabase
-          .from('barbershops')
-          .select('id, name')
-          .eq('invite_code', form.inviteCode.trim().toUpperCase())
-          .single()
+        const { data: shops, error: shopErr } = await supabase
+          .rpc('find_shop_by_invite', { p_code: form.inviteCode.trim() })
+        const shop = shops?.[0]
         if (shopErr || !shop) throw new Error('Código de convite inválido. Verifique com o proprietário.')
         targetShopId   = shop.id
         targetShopName = shop.name
