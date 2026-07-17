@@ -89,7 +89,7 @@ export function HeroSection({ onOpenAuth }: HeroSectionProps) {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ duration: 0.7, delay: 0.9 }}
-              className="flex items-center gap-8 mt-10">
+              className="flex flex-wrap items-center gap-x-8 gap-y-4 mt-10">
               <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.64)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 Confiado por
               </span>

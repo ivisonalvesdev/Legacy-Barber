@@ -62,7 +62,7 @@ export function BarberInsumosView({ user }: BarberInsumosViewProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '34px', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
+        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,5.5vw,34px)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
           Insumos
         </h1>
         <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>

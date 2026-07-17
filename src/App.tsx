@@ -220,7 +220,7 @@ export default function App() {
           <Sidebar user={currentUser} activeTab={tab} setActiveTab={setTab} onLogout={logout} />
         </div>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 min-w-0 overflow-y-auto">
           <div className="px-4 md:px-8 py-6 md:py-8">
             <motion.div key={`${currentUser.role}-${tab}`}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}

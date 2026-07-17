@@ -148,7 +148,7 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
+        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
           Minha Barbearia
         </h1>
         <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>

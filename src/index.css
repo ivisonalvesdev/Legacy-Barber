@@ -14,6 +14,13 @@ html, body {
   background: #050505;
   color: white;
   min-height: 100vh;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Mobile: toque sem flash azul e inputs ≥16px (evita o zoom automático do iOS ao focar) */
+* { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 767px) {
+  input, select, textarea { font-size: 16px !important; }
 }
 
 #root {

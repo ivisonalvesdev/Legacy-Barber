@@ -186,9 +186,9 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
   return (
     <div className="space-y-7">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
             Dashboard
           </h1>
           <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
@@ -216,7 +216,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
         {/* Revenue Chart — 2/3 */}
         <div className="md:col-span-2 rounded-2xl p-5"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
             <div>
               <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px' }}>Receita — Últimos 7 Dias</h3>
               <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '12px', marginTop: '2px' }}>

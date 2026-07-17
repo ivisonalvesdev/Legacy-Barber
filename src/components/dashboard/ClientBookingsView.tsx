@@ -82,7 +82,7 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97 }}
         transition={{ delay: idx * 0.05 }}
-        className="rounded-2xl p-4 flex items-center gap-4"
+        className="rounded-2xl p-4 flex flex-wrap items-center gap-x-4 gap-y-2.5"
         style={{
           background: 'rgba(255,255,255,0.022)',
           border: '1px solid rgba(255,255,255,0.06)',

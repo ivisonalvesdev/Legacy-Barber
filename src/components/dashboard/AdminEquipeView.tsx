@@ -109,9 +109,9 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
             Equipe
           </h1>
           <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
@@ -129,7 +129,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
       {/* Código de convite */}
       {inviteCode && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl p-4 flex items-center justify-between gap-4"
+          className="rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4"
           style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.2)' }}>
           <div>
             <p style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(212,175,55,0.6)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px' }}>
@@ -156,7 +156,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
       )}
 
       {/* KPIs rápidos */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { icon: Users,      label: 'Ativos hoje',   value: `${active.length}`,                           color: '#D4AF37' },
           { icon: Clock,      label: 'Atendimentos',  value: `${totalApt}`,                                color: '#60a5fa' },

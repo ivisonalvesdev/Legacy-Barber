@@ -147,9 +147,9 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
             Estoque
           </h1>
           <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
@@ -214,7 +214,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
       {/* Tabela */}
       <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ overflowX: 'auto' }}>
-        <table className="w-full">
+        <table className="w-full" style={{ minWidth: '620px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               {['Produto', 'Categoria', 'Estoque', 'Nível', 'Custo Unit.', 'Ajustar', ''].map((h, i) => (
