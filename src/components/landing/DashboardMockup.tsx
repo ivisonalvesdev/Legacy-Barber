@@ -21,7 +21,7 @@ export function DashboardMockup() {
           </div>
           <div className="flex items-center gap-1.5">
             <Scissors size={9} style={{ color: '#D4AF37' }} />
-            <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', fontFamily: "'DM Sans',sans-serif" }}>
+            <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', fontFamily: "'DM Sans',sans-serif" }}>
               Legacy Barber — Dashboard
             </span>
           </div>
@@ -44,7 +44,7 @@ export function DashboardMockup() {
                 background: s.gold ? 'rgba(212,175,55,0.07)' : 'rgba(255,255,255,0.03)',
                 border: `1px solid ${s.gold ? 'rgba(212,175,55,0.2)' : 'rgba(255,255,255,0.05)'}`,
               }}>
-              <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>
+              <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.64)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>
                 {s.label}
               </div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: s.gold ? '#D4AF37' : 'rgba(255,255,255,0.85)' }}>
@@ -58,7 +58,7 @@ export function DashboardMockup() {
         <div className="rounded-xl p-3"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
           <div className="flex items-center justify-between mb-2">
-            <span style={{ fontSize: '9px', color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: '9px', color: 'rgba(113,113,122,0.64)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Receita Semanal
             </span>
             <span style={{ fontSize: '9px', color: '#4ade80', fontWeight: 600 }}>↑ +24%</span>
@@ -68,7 +68,7 @@ export function DashboardMockup() {
 
         {/* Schedule */}
         <div>
-          <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>
+          <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.58)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>
             Próximos Agendamentos
           </div>
           <div className="space-y-1.5">
@@ -85,12 +85,12 @@ export function DashboardMockup() {
                   background: a.now ? 'rgba(212,175,55,0.06)' : 'rgba(255,255,255,0.02)',
                   border: `1px solid ${a.now ? 'rgba(212,175,55,0.18)' : 'rgba(255,255,255,0.04)'}`,
                 }}>
-                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: a.now ? '#D4AF37' : 'rgba(113,113,122,0.5)', minWidth: '30px' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: a.now ? '#D4AF37' : 'rgba(113,113,122,0.64)', minWidth: '30px' }}>
                   {a.time}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{a.name}</div>
-                  <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.5)' }}>{a.service}</div>
+                  <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.64)' }}>{a.service}</div>
                 </div>
                 {a.now && (
                   <div className="flex items-center gap-1">

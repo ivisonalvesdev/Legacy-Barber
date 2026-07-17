@@ -23,7 +23,7 @@ export function PricingSection({ onOpenAuth }: PricingSectionProps) {
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,4vw,52px)', fontWeight: 700, color: 'white', marginBottom: '12px' }}>
             Simples e transparente
           </h2>
-          <p style={{ color: 'rgba(113,113,122,0.6)', fontSize: '15px' }}>Sem taxas ocultas. Cancele quando quiser.</p>
+          <p style={{ color: 'rgba(113,113,122,0.82)', fontSize: '15px' }}>Sem taxas ocultas. Cancele quando quiser.</p>
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-5 items-center">
@@ -47,23 +47,23 @@ export function PricingSection({ onOpenAuth }: PricingSectionProps) {
                   MAIS POPULAR
                 </div>
               )}
-              <div style={{ fontSize: '12px', fontWeight: 700, color: plan.recommended ? '#D4AF37' : 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: plan.recommended ? '#D4AF37' : 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>
                 {plan.name}
               </div>
               <div className="flex items-baseline gap-1 mb-6">
                 <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '42px', fontWeight: 700, color: plan.recommended ? '#D4AF37' : 'white', lineHeight: 1 }}>
                   {plan.price}
                 </span>
-                {plan.period && <span style={{ fontSize: '14px', color: 'rgba(113,113,122,0.6)' }}>{plan.period}</span>}
+                {plan.period && <span style={{ fontSize: '14px', color: 'rgba(113,113,122,0.82)' }}>{plan.period}</span>}
               </div>
               <div className="space-y-3 mb-7">
                 {plan.features.map((feat, j) => (
                   <div key={j} className="flex items-center gap-2.5">
                     <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
                       style={{ background: plan.recommended ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.06)' }}>
-                      <Check size={9} style={{ color: plan.recommended ? '#D4AF37' : 'rgba(161,161,170,0.7)' }} />
+                      <Check size={9} style={{ color: plan.recommended ? '#D4AF37' : 'rgba(161,161,170,0.86)' }} />
                     </div>
-                    <span style={{ fontSize: '13px', color: plan.recommended ? 'rgba(255,255,255,0.8)' : 'rgba(161,161,170,0.65)' }}>{feat}</span>
+                    <span style={{ fontSize: '13px', color: plan.recommended ? 'rgba(255,255,255,0.8)' : 'rgba(161,161,170,0.77)' }}>{feat}</span>
                   </div>
                 ))}
               </div>
@@ -74,9 +74,9 @@ export function PricingSection({ onOpenAuth }: PricingSectionProps) {
                 className="w-full py-3 rounded-xl font-semibold text-sm"
                 style={plan.recommended
                   ? { background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)', color: '#000', letterSpacing: '0.02em' }
-                  : { border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(161,161,170,0.75)', background: 'transparent', transition: 'border-color 0.2s, color 0.2s' }}
+                  : { border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(161,161,170,0.84)', background: 'transparent', transition: 'border-color 0.2s, color 0.2s' }}
                 onMouseEnter={e => { if (!plan.recommended) { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(212,175,55,0.3)'; b.style.color = '#D4AF37' }}}
-                onMouseLeave={e => { if (!plan.recommended) { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.09)'; b.style.color = 'rgba(161,161,170,0.75)' }}}>
+                onMouseLeave={e => { if (!plan.recommended) { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.09)'; b.style.color = 'rgba(161,161,170,0.84)' }}}>
                 {plan.cta}
               </motion.button>
             </motion.div>

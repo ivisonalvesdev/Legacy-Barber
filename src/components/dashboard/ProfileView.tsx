@@ -75,7 +75,7 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
         <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '30px', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
           Meu Perfil
         </h1>
-        <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+        <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
           Seus dados de conta
         </p>
       </div>
@@ -92,7 +92,7 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
               {roleLabel}
             </span>
             {user.barbershopName && (
-              <span className="flex items-center gap-1" style={{ fontSize: '11px', color: 'rgba(113,113,122,0.65)' }}>
+              <span className="flex items-center gap-1" style={{ fontSize: '11px', color: 'rgba(113,113,122,0.77)' }}>
                 <Building2 size={10} />{user.barbershopName}
               </span>
             )}
@@ -114,16 +114,16 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
         />
 
         <div>
-          <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <Mail size={11} /> E-mail
           </label>
           <input value={user.email} disabled
             className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm"
-            style={{ ...inputStyle, color: 'rgba(113,113,122,0.6)', cursor: 'not-allowed' }} />
+            style={{ ...inputStyle, color: 'rgba(113,113,122,0.82)', cursor: 'not-allowed' }} />
         </div>
 
         <div>
-          <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <User size={11} /> Nome completo
           </label>
           <input value={name} onChange={e => setName(e.target.value)}
@@ -132,7 +132,7 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
         </div>
 
         <div>
-          <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             <Phone size={11} /> Telefone / WhatsApp
           </label>
           <input value={phone} onChange={e => setPhone(e.target.value)}
@@ -142,7 +142,7 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
 
         {user.role === 'barber' && (
           <div>
-            <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               <Scissors size={11} /> Especialidade
             </label>
             <input value={specialty} onChange={e => setSpecialty(e.target.value)}
@@ -167,7 +167,7 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
             background: saved
               ? 'rgba(74,222,128,0.12)'
               : dirty ? 'linear-gradient(135deg, #B8951F, #D4AF37)' : 'rgba(255,255,255,0.04)',
-            color: saved ? '#4ade80' : dirty ? '#000' : 'rgba(113,113,122,0.4)',
+            color: saved ? '#4ade80' : dirty ? '#000' : 'rgba(113,113,122,0.52)',
             border: saved ? '1px solid rgba(74,222,128,0.3)' : '1px solid transparent',
             cursor: dirty && !saving ? 'pointer' : 'not-allowed',
           }}>

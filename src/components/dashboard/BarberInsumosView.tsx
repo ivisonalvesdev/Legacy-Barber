@@ -65,7 +65,7 @@ export function BarberInsumosView({ user }: BarberInsumosViewProps) {
         <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '34px', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
           Insumos
         </h1>
-        <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+        <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
           Dê baixa nos produtos conforme usar durante os atendimentos
         </p>
       </div>
@@ -79,7 +79,7 @@ export function BarberInsumosView({ user }: BarberInsumosViewProps) {
       )}
 
       {!loading && !errMsg && inv.length === 0 && (
-        <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+        <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>
           Nenhum insumo cadastrado. O proprietário gerencia o estoque na aba Estoque.
         </p>
       )}
@@ -94,11 +94,11 @@ export function BarberInsumosView({ user }: BarberInsumosViewProps) {
               whileHover={{ y: -2 }}
               className="rounded-xl p-4"
               style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div style={{ fontSize: '10px', color: 'rgba(113,113,122,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{item.category}</div>
+              <div style={{ fontSize: '10px', color: 'rgba(113,113,122,0.68)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{item.category}</div>
               <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.88)', fontSize: '13px', marginBottom: '10px', lineHeight: 1.3 }}>{item.name}</div>
               <div className="flex items-baseline gap-1 mb-2">
                 <span style={{ fontSize: '20px', fontWeight: 700, color: pct <= 25 ? '#f87171' : '#D4AF37' }}>{item.stock}</span>
-                <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)' }}>/ {item.maxStock} {item.unit}</span>
+                <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)' }}>/ {item.maxStock} {item.unit}</span>
               </div>
               <div className="rounded-full overflow-hidden mb-3" style={{ height: '4px', background: 'rgba(255,255,255,0.06)' }}>
                 <div style={{ width: `${pct}%`, height: '100%', borderRadius: '9999px', background: barColor }} />
@@ -107,11 +107,11 @@ export function BarberInsumosView({ user }: BarberInsumosViewProps) {
                 className="w-full py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
                 style={{
                   border: '1px solid rgba(255,255,255,0.07)',
-                  color: item.stock <= 0 ? 'rgba(113,113,122,0.3)' : 'rgba(113,113,122,0.65)',
+                  color: item.stock <= 0 ? 'rgba(113,113,122,0.52)' : 'rgba(113,113,122,0.77)',
                   cursor: item.stock <= 0 ? 'not-allowed' : 'pointer',
                 }}
                 onMouseEnter={e => { if (item.stock <= 0) return; const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(239,68,68,0.42)'; b.style.color = '#f87171'; b.style.background = 'rgba(239,68,68,0.06)' }}
-                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.07)'; b.style.color = item.stock <= 0 ? 'rgba(113,113,122,0.3)' : 'rgba(113,113,122,0.65)'; b.style.background = 'transparent' }}>
+                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.07)'; b.style.color = item.stock <= 0 ? 'rgba(113,113,122,0.52)' : 'rgba(113,113,122,0.77)'; b.style.background = 'transparent' }}>
                 {item.stock <= 0 ? 'Esgotado' : 'Usar 1 unidade'}
               </button>
             </motion.div>

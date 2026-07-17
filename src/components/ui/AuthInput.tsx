@@ -17,7 +17,7 @@ export function AuthInput({
 
   return (
     <div className="space-y-1.5">
-      <label style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+      <label style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
         {label}
       </label>
       <div className="relative flex items-center" style={{
@@ -28,7 +28,7 @@ export function AuthInput({
         boxShadow: focused ? '0 0 20px rgba(212,175,55,0.08)' : 'none',
       }}>
         <Icon size={14} className="ml-3.5 flex-shrink-0"
-          style={{ color: focused ? '#D4AF37' : 'rgba(113,113,122,0.5)', transition: 'color 0.2s' }} />
+          style={{ color: focused ? '#D4AF37' : 'rgba(113,113,122,0.64)', transition: 'color 0.2s' }} />
         <input
           type={type}
           value={value}

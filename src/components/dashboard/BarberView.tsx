@@ -76,7 +76,7 @@ export function BarberView({ user }: BarberViewProps) {
         <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '34px', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
           {greeting}, {user.name.split(' ')[0]}
         </h1>
-        <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+        <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
           {today.charAt(0).toUpperCase() + today.slice(1)}
           {user.specialty && <span style={{ color: 'rgba(212,175,55,0.5)', marginLeft: '8px' }}>· {user.specialty}</span>}
         </p>
@@ -84,15 +84,15 @@ export function BarberView({ user }: BarberViewProps) {
         <div className="grid grid-cols-2 gap-3 mt-5">
           <TiltCard className="rounded-xl p-4"
             style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Atendimentos</div>
+            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Atendimentos</div>
             <div style={{ fontSize: '28px', fontWeight: 700, color: 'white' }}>{stats.count || '—'}</div>
-            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '2px' }}>hoje</div>
+            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '2px' }}>hoje</div>
           </TiltCard>
           <TiltCard className="rounded-xl p-4"
             style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.15)', boxShadow: '0 0 30px rgba(212,175,55,0.06)' }}>
-            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Faturamento</div>
+            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Faturamento</div>
             <div style={{ fontSize: '28px', fontWeight: 700, color: '#D4AF37' }}>R$ {stats.revenue || '—'}</div>
-            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '2px' }}>hoje</div>
+            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '2px' }}>hoje</div>
           </TiltCard>
         </div>
       </div>
@@ -106,7 +106,7 @@ export function BarberView({ user }: BarberViewProps) {
           <div className="absolute left-[21px] top-3 bottom-3 w-px"
             style={{ background: 'linear-gradient(to bottom, rgba(212,175,55,0.14), rgba(255,255,255,0.03))' }} />
           {agenda.length === 0 && (
-            <p className="text-center py-6 pl-8" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+            <p className="text-center py-6 pl-8" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>
               Nenhum agendamento para hoje.
             </p>
           )}
@@ -143,12 +143,12 @@ export function BarberView({ user }: BarberViewProps) {
                   border: `1px solid ${slot.status === 'current' ? 'rgba(212,175,55,0.22)' : 'rgba(255,255,255,0.05)'}`,
                 }}>
                 <span className="font-mono text-xs font-bold flex-shrink-0"
-                  style={{ color: slot.status === 'current' ? '#D4AF37' : 'rgba(113,113,122,0.55)', minWidth: '40px' }}>
+                  style={{ color: slot.status === 'current' ? '#D4AF37' : 'rgba(113,113,122,0.68)', minWidth: '40px' }}>
                   {slot.time}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.88)', fontSize: '13px' }} className="truncate">{slot.client}</div>
-                  <div style={{ color: 'rgba(113,113,122,0.6)', fontSize: '12px' }} className="truncate">{slot.service}</div>
+                  <div style={{ color: 'rgba(113,113,122,0.82)', fontSize: '12px' }} className="truncate">{slot.service}</div>
                 </div>
                 {slot.status === 'done' ? (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"

@@ -97,7 +97,7 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
         </div>
         <div className="flex-1 min-w-0">
           <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '13px' }} className="truncate">{b.service}</div>
-          <div className="flex items-center gap-3 mt-1" style={{ fontSize: '11px', color: 'rgba(113,113,122,0.6)' }}>
+          <div className="flex items-center gap-3 mt-1" style={{ fontSize: '11px', color: 'rgba(113,113,122,0.82)' }}>
             <span className="flex items-center gap-1"><Scissors size={10} />{b.barber}</span>
             <span className="flex items-center gap-1"><Clock size={10} />{fmtDate(b.date)} · {b.time}</span>
           </div>
@@ -131,13 +131,13 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
         <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '30px', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
           Meus Agendamentos
         </h1>
-        <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+        <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
           Acompanhe e gerencie seus horários
         </p>
       </div>
 
       {loading && (
-        <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>Carregando…</p>
+        <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>Carregando…</p>
       )}
 
       {!loading && bookings.length === 0 && (
@@ -145,7 +145,7 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <Calendar size={28} style={{ color: 'rgba(212,175,55,0.3)', margin: '0 auto 12px' }} />
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 500 }}>Nenhum agendamento ainda</p>
-          <p style={{ color: 'rgba(113,113,122,0.5)', fontSize: '12px', marginTop: '4px' }}>
+          <p style={{ color: 'rgba(113,113,122,0.64)', fontSize: '12px', marginTop: '4px' }}>
             Use a aba <strong style={{ color: '#D4AF37' }}>Agendar</strong> para marcar seu primeiro horário.
           </p>
         </div>
@@ -153,7 +153,7 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
 
       {upcoming.length > 0 && (
         <div>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.64)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
             Próximos
           </div>
           <div className="space-y-2.5">
@@ -166,7 +166,7 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
 
       {history.length > 0 && (
         <div>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.52)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
             Histórico
           </div>
           <div className="space-y-2.5">

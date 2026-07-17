@@ -61,7 +61,7 @@ export function HeroSection({ onOpenAuth }: HeroSectionProps) {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.52 }}
               className="mt-6 text-base leading-relaxed"
-              style={{ color: 'rgba(113,113,122,0.72)', maxWidth: '470px' }}>
+              style={{ color: 'rgba(113,113,122,0.82)', maxWidth: '470px' }}>
               Agendamento inteligente, controle total de equipe e estoque, relatórios em tempo real. Tudo em um sistema feito para barbearias que buscam excelência.
             </motion.p>
 
@@ -79,9 +79,9 @@ export function HeroSection({ onOpenAuth }: HeroSectionProps) {
               <motion.button whileTap={{ scale: 0.97 }}
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
                 className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-medium text-sm transition-all duration-200"
-                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(161,161,170,0.75)' }}
+                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(161,161,170,0.84)' }}
                 onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(212,175,55,0.35)'; b.style.color = '#D4AF37' }}
-                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(161,161,170,0.75)' }}>
+                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(161,161,170,0.84)' }}>
                 Ver Recursos
               </motion.button>
             </motion.div>
@@ -90,13 +90,13 @@ export function HeroSection({ onOpenAuth }: HeroSectionProps) {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ duration: 0.7, delay: 0.9 }}
               className="flex items-center gap-8 mt-10">
-              <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.38)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.64)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 Confiado por
               </span>
               {[['1.200+', 'Barbearias'], ['50k+', 'Agendamentos'], ['98%', 'Satisfação']].map(([v, l], i) => (
                 <div key={i}>
                   <div style={{ fontWeight: 700, color: '#D4AF37', fontSize: '18px', lineHeight: 1 }}>{v}</div>
-                  <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '2px' }}>{l}</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '2px' }}>{l}</div>
                 </div>
               ))}
             </motion.div>

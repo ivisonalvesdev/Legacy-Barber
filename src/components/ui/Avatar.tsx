@@ -51,7 +51,7 @@ export function Avatar({
       style={{
         ...base,
         background: highlight ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.05)',
-        color:      highlight ? '#D4AF37' : 'rgba(113,113,122,0.8)',
+        color:      highlight ? '#D4AF37' : 'rgba(113,113,122,0.86)',
         // Iniciais acompanham o tamanho do avatar
         fontSize:   Math.max(10, Math.round(size * 0.34)),
         letterSpacing: '0.02em',

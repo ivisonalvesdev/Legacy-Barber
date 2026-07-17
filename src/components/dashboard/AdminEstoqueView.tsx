@@ -152,7 +152,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
             Estoque
           </h1>
-          <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             {inv.length} produtos · Valor em estoque: R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>
         </div>
@@ -189,7 +189,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 flex-1 px-3 py-2 rounded-xl"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <Search size={14} style={{ color: 'rgba(113,113,122,0.5)' }} />
+          <Search size={14} style={{ color: 'rgba(113,113,122,0.64)' }} />
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar produto…"
@@ -203,7 +203,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
               style={{
                 background: cat === c ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.03)',
                 border: `1px solid ${cat === c ? 'rgba(212,175,55,0.3)' : 'rgba(255,255,255,0.07)'}`,
-                color:  cat === c ? '#D4AF37' : 'rgba(113,113,122,0.65)',
+                color:  cat === c ? '#D4AF37' : 'rgba(113,113,122,0.77)',
               }}>
               {c}
             </button>
@@ -219,7 +219,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               {['Produto', 'Categoria', 'Estoque', 'Nível', 'Custo Unit.', 'Ajustar', ''].map((h, i) => (
                 <th key={i} className="px-5 py-3 text-left"
-                  style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.68)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   {h}
                 </th>
               ))}
@@ -246,13 +246,13 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="px-2 py-0.5 rounded-full"
-                        style={{ fontSize: '10px', fontWeight: 600, background: 'rgba(255,255,255,0.04)', color: 'rgba(161,161,170,0.65)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        style={{ fontSize: '10px', fontWeight: 600, background: 'rgba(255,255,255,0.04)', color: 'rgba(161,161,170,0.77)', border: '1px solid rgba(255,255,255,0.07)' }}>
                         {item.category}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 font-mono" style={{ fontSize: '13px' }}>
                       <span style={{ color: pct <= 25 ? '#f87171' : 'rgba(255,255,255,0.8)' }}>{item.stock}</span>
-                      <span style={{ color: 'rgba(113,113,122,0.45)' }}> / {item.maxStock} {item.unit}</span>
+                      <span style={{ color: 'rgba(113,113,122,0.58)' }}> / {item.maxStock} {item.unit}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       <StockBar pct={pct} color={barColor} />
@@ -276,9 +276,9 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
                         <button title="Clique para editar o custo"
                           onClick={() => setCostEdit({ id: item.id, value: String(item.cost).replace('.', ',') })}
                           className="transition-colors"
-                          style={{ color: 'rgba(113,113,122,0.55)', borderBottom: '1px dashed rgba(113,113,122,0.35)' }}
+                          style={{ color: 'rgba(113,113,122,0.68)', borderBottom: '1px dashed rgba(113,113,122,0.46)' }}
                           onMouseEnter={e => (e.currentTarget.style.color = '#D4AF37')}
-                          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(113,113,122,0.55)')}>
+                          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(113,113,122,0.68)')}>
                           R$ {item.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </button>
                       )}
@@ -287,9 +287,9 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
                       <div className="flex items-center gap-1">
                         <button onClick={() => adjust(item, -1)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-all flex-shrink-0"
-                          style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}
+                          style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.86)' }}
                           onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(239,68,68,0.4)'; b.style.color = '#f87171'; b.style.background = 'rgba(239,68,68,0.06)' }}
-                          onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(113,113,122,0.7)'; b.style.background = 'transparent' }}>
+                          onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(113,113,122,0.86)'; b.style.background = 'transparent' }}>
                           −
                         </button>
                         <input
@@ -308,9 +308,9 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
                           }} />
                         <button onClick={() => adjust(item, +1)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-all flex-shrink-0"
-                          style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}
+                          style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.86)' }}
                           onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(212,175,55,0.4)'; b.style.color = '#D4AF37'; b.style.background = 'rgba(212,175,55,0.06)' }}
-                          onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(113,113,122,0.7)'; b.style.background = 'transparent' }}>
+                          onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(113,113,122,0.86)'; b.style.background = 'transparent' }}>
                           +
                         </button>
                       </div>
@@ -318,9 +318,9 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
                     <td className="px-3 py-3.5">
                       <button onClick={() => removeItem(item.id)} title="Remover produto"
                         className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
-                        style={{ color: 'rgba(113,113,122,0.35)' }}
+                        style={{ color: 'rgba(113,113,122,0.46)' }}
                         onMouseEnter={e => { e.currentTarget.style.color = '#f87171' }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(113,113,122,0.35)' }}>
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(113,113,122,0.46)' }}>
                         <Trash2 size={13} />
                       </button>
                     </td>
@@ -331,7 +331,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-5 py-10 text-center"
-                  style={{ color: 'rgba(113,113,122,0.4)', fontSize: '13px' }}>
+                  style={{ color: 'rgba(113,113,122,0.52)', fontSize: '13px' }}>
                   {loading ? 'Carregando…' : 'Nenhum produto encontrado'}
                 </td>
               </tr>
@@ -360,7 +360,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
                     Novo Produto
                   </h3>
                 </div>
-                <button onClick={() => setShowAdd(false)} style={{ color: 'rgba(113,113,122,0.5)' }}>
+                <button onClick={() => setShowAdd(false)} style={{ color: 'rgba(113,113,122,0.64)' }}>
                   <X size={17} />
                 </button>
               </div>
@@ -373,7 +373,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
                   { label: 'Quantidade máxima', key: 'max', placeholder: '0', type: 'number' },
                 ].map(f => (
                   <div key={f.key}>
-                    <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                       {f.label}
                     </label>
                     <input
@@ -387,7 +387,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
                 ))}
 
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     Categoria
                   </label>
                   <select
@@ -405,7 +405,7 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
               <div className="flex gap-2 mt-5">
                 <button onClick={() => setShowAdd(false)}
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}>
+                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.86)' }}>
                   Cancelar
                 </button>
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}

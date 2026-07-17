@@ -31,7 +31,7 @@ type RevenuePoint = {
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   done:    { label: 'Concluído',  color: '#4ade80', bg: 'rgba(74,222,128,0.1)'  },
   current: { label: 'Em curso',  color: '#D4AF37', bg: 'rgba(212,175,55,0.1)'  },
-  upcoming:{ label: 'Aguardando',color: 'rgba(161,161,170,0.6)', bg: 'rgba(255,255,255,0.04)' },
+  upcoming:{ label: 'Aguardando',color: 'rgba(161,161,170,0.82)', bg: 'rgba(255,255,255,0.04)' },
 }
 
 const DAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -191,7 +191,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
             Dashboard
           </h1>
-          <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             {todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)} · {user.barbershopName || 'Legacy Barber'}
           </p>
         </div>
@@ -219,7 +219,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px' }}>Receita — Últimos 7 Dias</h3>
-              <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '12px', marginTop: '2px' }}>
+              <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '12px', marginTop: '2px' }}>
                 {loading ? '—' : `Total: R$ ${totalChart.toLocaleString('pt-BR')}`}
               </p>
             </div>
@@ -248,7 +248,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
               <div key={i}>
                 <div className="flex items-center justify-between mb-1.5">
                   <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.72)' }}>{s.name}</span>
-                  <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.6)', fontFamily: 'monospace' }}>{s.value}</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.82)', fontFamily: 'monospace' }}>{s.value}</span>
                 </div>
                 <div className="rounded-full overflow-hidden" style={{ height: '4px', background: 'rgba(255,255,255,0.05)' }}>
                   <motion.div
@@ -268,7 +268,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: 700, color: 'white' }}>
             Agenda de Hoje
           </h2>
-          <div className="flex items-center gap-1.5" style={{ fontSize: '12px', color: 'rgba(113,113,122,0.55)' }}>
+          <div className="flex items-center gap-1.5" style={{ fontSize: '12px', color: 'rgba(113,113,122,0.68)' }}>
             <Clock size={12} />
             {agenda.filter(a => a.status === 'done').length} de {agenda.length} concluídos
           </div>
@@ -276,7 +276,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
         <div className="rounded-2xl overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
           {agenda.length === 0 && !loading && (
-            <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+            <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>
               Nenhum agendamento para hoje.
             </p>
           )}
@@ -288,10 +288,10 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
                 transition={{ delay: i * 0.06 }}
                 className="flex items-center gap-4 px-5 py-3.5"
                 style={{ borderBottom: i < agenda.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: '13px', color: 'rgba(113,113,122,0.6)', minWidth: '44px' }}>{item.time}</span>
+                <span style={{ fontFamily: 'monospace', fontSize: '13px', color: 'rgba(113,113,122,0.82)', minWidth: '44px' }}>{item.time}</span>
                 <div className="flex-1">
                   <div style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{item.client}</div>
-                  <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '1px' }}>{item.service}</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '1px' }}>{item.service}</div>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold"
                   style={{ color: s.color, background: s.bg }}>

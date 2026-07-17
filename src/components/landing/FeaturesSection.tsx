@@ -18,7 +18,7 @@ export function FeaturesSection() {
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,4vw,52px)', fontWeight: 700, color: 'white', marginBottom: '14px' }}>
             Tudo que sua barbearia precisa
           </h2>
-          <p style={{ color: 'rgba(113,113,122,0.6)', fontSize: '15px', maxWidth: '480px', margin: '0 auto' }}>
+          <p style={{ color: 'rgba(113,113,122,0.82)', fontSize: '15px', maxWidth: '480px', margin: '0 auto' }}>
             Do agendamento ao financeiro, uma plataforma completa para barbearias profissionais.
           </p>
         </motion.div>
@@ -42,7 +42,7 @@ export function FeaturesSection() {
                   <Icon size={18} style={{ color: '#D4AF37' }} />
                 </div>
                 <h3 style={{ fontWeight: 700, color: 'rgba(255,255,255,0.9)', fontSize: '15px', marginBottom: '8px' }}>{f.title}</h3>
-                <p style={{ color: 'rgba(113,113,122,0.65)', fontSize: '13px', lineHeight: 1.65 }}>{f.desc}</p>
+                <p style={{ color: 'rgba(113,113,122,0.77)', fontSize: '13px', lineHeight: 1.65 }}>{f.desc}</p>
               </motion.div>
             )
           })}

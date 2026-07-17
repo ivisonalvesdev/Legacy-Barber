@@ -13,10 +13,10 @@ export function LandingFooter() {
               </div>
               <div>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>
-                <div style={{ fontSize: '7px', color: 'rgba(113,113,122,0.4)', letterSpacing: '0.36em' }}>BARBER</div>
+                <div style={{ fontSize: '9px', fontWeight: 600, color: 'rgba(161,161,170,0.85)', letterSpacing: '0.3em', marginTop: '2px' }}>BARBER</div>
               </div>
             </div>
-            <p style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px', lineHeight: 1.7, maxWidth: '280px' }}>
+            <p style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px', lineHeight: 1.7, maxWidth: '280px' }}>
               O sistema de gestão para barbearias de elite. Tecnologia que eleva o padrão do seu negócio.
             </p>
           </div>
@@ -26,15 +26,15 @@ export function LandingFooter() {
             { title: 'Empresa', links: ['Sobre', 'Blog', 'Contato', 'Parceiros'] },
           ].map((col, i) => (
             <div key={i}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '14px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.64)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '14px' }}>
                 {col.title}
               </div>
               <div className="space-y-2.5">
                 {col.links.map(link => (
                   <div key={link}
-                    style={{ fontSize: '13px', color: 'rgba(113,113,122,0.5)', cursor: 'pointer', transition: 'color 0.2s' }}
+                    style={{ fontSize: '13px', color: 'rgba(113,113,122,0.64)', cursor: 'pointer', transition: 'color 0.2s' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.color = '#D4AF37' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.color = 'rgba(113,113,122,0.5)' }}>
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.color = 'rgba(113,113,122,0.64)' }}>
                     {link}
                   </div>
                 ))}
@@ -44,8 +44,8 @@ export function LandingFooter() {
         </div>
 
         <div className="pt-6 flex items-center justify-between" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-          <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.35)' }}>© 2025 Legacy Barber. Todos os direitos reservados.</span>
-          <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.35)' }}>Feito com precisão artesanal.</span>
+          <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.46)' }}>© 2025 Legacy Barber. Todos os direitos reservados.</span>
+          <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.46)' }}>Feito com precisão artesanal.</span>
         </div>
       </div>
     </footer>

@@ -119,7 +119,7 @@ function MiniBarChart({ data, height = 110 }: MiniBarChartProps) {
                 boxShadow: isHover && d.value > 0 ? '0 0 12px rgba(212,175,55,0.4)' : 'none',
                 transition: 'background 0.15s, box-shadow 0.15s',
               }} />
-            <span style={{ fontSize: '9px', color: 'rgba(113,113,122,0.5)', fontWeight: 500 }}>{d.day}</span>
+            <span style={{ fontSize: '9px', color: 'rgba(113,113,122,0.64)', fontWeight: 500 }}>{d.day}</span>
           </div>
         )
       })}
@@ -159,10 +159,10 @@ function DualBarChart({ data, height = 130 }: { data: DualPoint[]; height?: numb
                 transition={{ duration: 0.7, delay: i * 0.06 + 0.05 }}
                 className="rounded-t-md" style={{
                   width: '42%',
-                  background: d.outValue > 0 ? 'rgba(161,161,170,0.35)' : 'rgba(255,255,255,0.04)',
+                  background: d.outValue > 0 ? 'rgba(161,161,170,0.46)' : 'rgba(255,255,255,0.04)',
                 }} />
             </div>
-            <span style={{ fontSize: '9px', color: 'rgba(113,113,122,0.5)', fontWeight: 500 }}>{d.label}</span>
+            <span style={{ fontSize: '9px', color: 'rgba(113,113,122,0.64)', fontWeight: 500 }}>{d.label}</span>
           </div>
         )
       })}
@@ -214,7 +214,7 @@ function KpiCard({ icon: Icon, label, value, d = null, invert = false, loading, 
       <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: 700, color: 'white', lineHeight: 1 }}>
         {loading ? '—' : value}
       </div>
-      <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '4px' }}>{label}</div>
+      <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '4px' }}>{label}</div>
     </motion.div>
   )
 }
@@ -441,14 +441,14 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
             Relatórios
           </h1>
-          <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             Visão geral de desempenho — {monthLabel}
           </p>
         </div>
         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           onClick={() => window.print()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.7)' }}>
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.86)' }}>
           <Download size={13} /> Exportar / Imprimir
         </motion.button>
       </div>
@@ -490,7 +490,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px' }}>Receita por Período</h3>
-            <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '12px', marginTop: '2px' }}>
+            <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '12px', marginTop: '2px' }}>
               {loading ? '—' : `Total: R$ ${chartTotal.toLocaleString('pt-BR')}`}
             </p>
           </div>
@@ -501,7 +501,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
                 style={{
                   background: period === p ? 'rgba(212,175,55,0.1)' : 'transparent',
                   border: `1px solid ${period === p ? 'rgba(212,175,55,0.3)' : 'rgba(255,255,255,0.07)'}`,
-                  color:  period === p ? '#D4AF37' : 'rgba(113,113,122,0.6)',
+                  color:  period === p ? '#D4AF37' : 'rgba(113,113,122,0.82)',
                 }}>
                 {p === 'semana' ? 'Semana' : '6 Meses'}
               </button>
@@ -527,23 +527,23 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
             <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px' }}>
               Compras × Consumo — 6 meses
             </h3>
-            <div className="flex items-center gap-3" style={{ fontSize: '10px', color: 'rgba(113,113,122,0.6)' }}>
+            <div className="flex items-center gap-3" style={{ fontSize: '10px', color: 'rgba(113,113,122,0.82)' }}>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-sm inline-block" style={{ background: 'rgba(212,175,55,0.7)' }} /> Compras
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-sm inline-block" style={{ background: 'rgba(161,161,170,0.4)' }} /> Consumo
+                <span className="w-2 h-2 rounded-sm inline-block" style={{ background: 'rgba(161,161,170,0.52)' }} /> Consumo
               </span>
             </div>
           </div>
           {!loading && insumosChart.every(p => p.inValue === 0 && p.outValue === 0) ? (
-            <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.45)', fontSize: '12px' }}>
+            <p className="text-center py-8" style={{ color: 'rgba(113,113,122,0.58)', fontSize: '12px' }}>
               Sem movimentações ainda. Reposições e baixas de estoque aparecem aqui.
             </p>
           ) : (
             <DualBarChart data={insumosChart} height={150} />
           )}
-          <p style={{ fontSize: '10px', color: 'rgba(113,113,122,0.45)', marginTop: '10px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '10px', color: 'rgba(113,113,122,0.58)', marginTop: '10px', lineHeight: 1.5 }}>
             Compras = dinheiro gasto repondo estoque · Consumo = custo dos produtos usados nos atendimentos
           </p>
         </div>
@@ -554,7 +554,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
             Insumos mais consumidos — Mês
           </h3>
           {!loading && topInsumos.length === 0 && (
-            <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.45)', fontSize: '12px' }}>
+            <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.58)', fontSize: '12px' }}>
               Nenhuma baixa de insumo registrada este mês.
             </p>
           )}
@@ -566,7 +566,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
                   <div className="flex items-center justify-between mb-1.5">
                     <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.72)' }}>{t.name}</span>
                     <div className="flex items-center gap-3">
-                      <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)' }}>{t.qty} un</span>
+                      <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)' }}>{t.qty} un</span>
                       <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(212,175,55,0.7)', fontFamily: 'monospace' }}>
                         {money(t.value)}
                       </span>
@@ -575,7 +575,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
                   <div className="rounded-full overflow-hidden" style={{ height: '4px', background: 'rgba(255,255,255,0.05)' }}>
                     <motion.div initial={{ width: 0 }} animate={{ width: `${(t.value / maxVal) * 100}%` }}
                       transition={{ duration: 0.9, delay: i * 0.1 }}
-                      style={{ height: '100%', borderRadius: '9999px', background: 'rgba(161,161,170,0.45)' }} />
+                      style={{ height: '100%', borderRadius: '9999px', background: 'rgba(161,161,170,0.58)' }} />
                   </div>
                 </motion.div>
               )
@@ -583,7 +583,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
           </div>
           <div className="mt-4 pt-4 flex items-center justify-between"
             style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.55)' }}>Valor parado em estoque hoje</span>
+            <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.68)' }}>Valor parado em estoque hoje</span>
             <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 700, color: '#D4AF37' }}>
               {loading ? '—' : money(totals.stockValue)}
             </span>
@@ -601,7 +601,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
             Top Barbeiros — Mês
           </h3>
           {!loading && topBarbers.length === 0 && (
-            <p className="text-center py-4" style={{ color: 'rgba(113,113,122,0.45)', fontSize: '12px' }}>
+            <p className="text-center py-4" style={{ color: 'rgba(113,113,122,0.58)', fontSize: '12px' }}>
               Nenhum atendimento concluído este mês.
             </p>
           )}
@@ -612,13 +612,13 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
                 transition={{ delay: i * 0.1 }}
                 className="flex items-center gap-3">
                 <div className="text-[11px] font-bold w-4 text-center"
-                  style={{ color: i === 0 ? '#D4AF37' : 'rgba(113,113,122,0.4)' }}>
+                  style={{ color: i === 0 ? '#D4AF37' : 'rgba(113,113,122,0.52)' }}>
                   #{i + 1}
                 </div>
                 <Avatar url={b.avatarUrl} fallback={b.avatar} size={36} rounded="xl" highlight />
                 <div className="flex-1 min-w-0">
                   <div style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }} className="truncate">{b.name}</div>
-                  <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)' }}>{b.clients} atendimento{b.clients !== 1 ? 's' : ''}</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)' }}>{b.clients} atendimento{b.clients !== 1 ? 's' : ''}</div>
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', fontFamily: 'monospace', flexShrink: 0 }}>
                   R$ {b.revenue.toLocaleString('pt-BR')}
@@ -635,7 +635,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
             Distribuição de Serviços
           </h3>
           {!loading && svcDist.length === 0 && (
-            <p className="text-center py-4" style={{ color: 'rgba(113,113,122,0.45)', fontSize: '12px' }}>
+            <p className="text-center py-4" style={{ color: 'rgba(113,113,122,0.58)', fontSize: '12px' }}>
               Nenhum atendimento concluído este mês.
             </p>
           )}
@@ -650,7 +650,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
                     <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.72)' }}>{s.name}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', fontFamily: 'monospace' }}>
                       R$ {s.revenue.toLocaleString('pt-BR')}
                     </span>
                     <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(212,175,55,0.7)', minWidth: '28px', textAlign: 'right' }}>
@@ -671,7 +671,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
           {/* Total */}
           <div className="mt-4 pt-4 flex items-center justify-between"
             style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.55)' }}>Total faturado no mês</span>
+            <span style={{ fontSize: '12px', color: 'rgba(113,113,122,0.68)' }}>Total faturado no mês</span>
             <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 700, color: '#D4AF37' }}>
               R$ {totals.month.toLocaleString('pt-BR')}
             </span>

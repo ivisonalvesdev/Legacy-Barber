@@ -6,6 +6,7 @@ import type { AppUser, OpenAuthFn, UserRole } from './types'
 import { supabase } from './lib/supabase'
 
 import { AmbientBackground }      from './components/ui/AmbientBackground'
+import { Preloader }              from './components/ui/Preloader'
 import { Avatar }                 from './components/ui/Avatar'
 import { LandingPage }            from './components/landing/LandingPage'
 import { AuthModal }              from './components/auth/AuthModal'
@@ -30,6 +31,13 @@ export default function App() {
   const [mobileOpen, setMobile] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [splashDone, setSplashDone] = useState(false)
+
+  // Garante que o splash (contagem 0→100%) apareça por completo
+  useEffect(() => {
+    const t = setTimeout(() => setSplashDone(true), 2000)
+    return () => clearTimeout(t)
+  }, [])
 
   // ── Restaura sessão ao recarregar a página ─────────────────
   useEffect(() => {
@@ -107,13 +115,7 @@ export default function App() {
   }
 
   // ── Carregando sessão (evita flash da landing) ─────────────
-  if (authLoading) return (
-    <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
-        <Scissors size={22} style={{ color: '#D4AF37' }} />
-      </motion.div>
-    </div>
-  )
+  if (authLoading || !splashDone) return <Preloader />
 
   // ── Não autenticado ────────────────────────────────────────
   if (!currentUser) return (
@@ -171,7 +173,7 @@ export default function App() {
               {currentUser.name.split(' ')[0]}
             </span>
           </div>
-          <button onClick={() => setMobile(o => !o)} style={{ color: 'rgba(113,113,122,0.7)' }}>
+          <button onClick={() => setMobile(o => !o)} style={{ color: 'rgba(113,113,122,0.86)' }}>
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
@@ -193,7 +195,7 @@ export default function App() {
                     onClick={() => { setTab(item.id); setMobile(false) }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors"
                     style={{
-                      color: active ? '#D4AF37' : 'rgba(161,161,170,0.7)',
+                      color: active ? '#D4AF37' : 'rgba(161,161,170,0.86)',
                       background: active ? 'rgba(212,175,55,0.06)' : 'transparent',
                     }}>
                     <Icon size={14} />{item.label}
@@ -220,13 +222,11 @@ export default function App() {
 
         <main className="flex-1 overflow-y-auto">
           <div className="px-4 md:px-8 py-6 md:py-8">
-            <AnimatePresence mode="wait">
-              <motion.div key={`${currentUser.role}-${tab}`}
-                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.26 }}>
-                {activeView}
-              </motion.div>
-            </AnimatePresence>
+            <motion.div key={`${currentUser.role}-${tab}`}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}>
+              {activeView}
+            </motion.div>
           </div>
         </main>
       </div>

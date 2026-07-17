@@ -330,7 +330,7 @@ export function ClientView({ user }: ClientViewProps) {
         <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '30px', fontWeight: 700, color: 'white', marginBottom: '8px' }}>
           Agendamento Confirmado!
         </h2>
-        <p style={{ color: 'rgba(113,113,122,0.8)', fontSize: '14px', lineHeight: 1.6, marginBottom: '32px' }}>
+        <p style={{ color: 'rgba(113,113,122,0.86)', fontSize: '14px', lineHeight: 1.6, marginBottom: '32px' }}>
           Obrigado, <strong style={{ color: 'rgba(255,255,255,0.8)' }}>{user.name.split(' ')[0]}</strong>!<br />
           {selBarber?.name.split(' ')[0]} te espera no horário marcado.
         </p>
@@ -339,12 +339,12 @@ export function ClientView({ user }: ClientViewProps) {
           style={{ background: 'rgba(212,175,55,0.04)', border: '1px solid rgba(212,175,55,0.16)' }}>
           {[['Barbearia', selShop?.name], ['Serviço', selService?.name], ['Barbeiro', selBarber?.name], ['Data', selDate], ['Horário', selTime]].map(([k, v]) => (
             <div key={k} className="flex justify-between items-center py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              <span style={{ color: 'rgba(113,113,122,0.6)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k}</span>
+              <span style={{ color: 'rgba(113,113,122,0.82)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k}</span>
               <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '13px', fontWeight: 500 }}>{v}</span>
             </div>
           ))}
           <div className="flex justify-between items-center pt-3">
-            <span style={{ color: 'rgba(113,113,122,0.6)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total</span>
+            <span style={{ color: 'rgba(113,113,122,0.82)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total</span>
             <span style={{ color: '#D4AF37', fontWeight: 700, fontSize: '20px' }}>R$ {selService?.price}</span>
           </div>
         </div>
@@ -364,7 +364,7 @@ export function ClientView({ user }: ClientViewProps) {
         <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '30px', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
           Olá, {user.name.split(' ')[0]} 👋
         </h1>
-        <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>Faça seu agendamento em minutos</p>
+        <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>Faça seu agendamento em minutos</p>
       </div>
 
       {/* Stepper */}
@@ -383,13 +383,13 @@ export function ClientView({ user }: ClientViewProps) {
                   className="w-9 h-9 rounded-full flex items-center justify-center border">
                   {step > s.n
                     ? <Check size={14} className="text-black" />
-                    : <span style={{ fontSize: '12px', fontWeight: 700, color: step === s.n ? '#D4AF37' : 'rgba(113,113,122,0.5)' }}>{s.n}</span>
+                    : <span style={{ fontSize: '12px', fontWeight: 700, color: step === s.n ? '#D4AF37' : 'rgba(113,113,122,0.64)' }}>{s.n}</span>
                   }
                 </motion.div>
                 {/* No mobile o título de cada passo já dá o contexto; 5 labels
                     lado a lado estourariam a linha. */}
                 <span className="hidden sm:block"
-                  style={{ fontSize: '10px', fontWeight: 500, whiteSpace: 'nowrap', color: step === s.n ? '#D4AF37' : step > s.n ? 'rgba(161,161,170,0.7)' : 'rgba(113,113,122,0.45)' }}>
+                  style={{ fontSize: '10px', fontWeight: 500, whiteSpace: 'nowrap', color: step === s.n ? '#D4AF37' : step > s.n ? 'rgba(161,161,170,0.86)' : 'rgba(113,113,122,0.58)' }}>
                   {s.label}
                 </span>
               </div>
@@ -414,7 +414,7 @@ export function ClientView({ user }: ClientViewProps) {
 
             {/* Busca por nome, bairro ou cidade */}
             <div className="relative mb-4">
-              <Search size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(113,113,122,0.5)' }} />
+              <Search size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(113,113,122,0.64)' }} />
               <input
                 value={shopQuery} onChange={e => setShopQuery(e.target.value)}
                 placeholder="Buscar por nome, bairro ou cidade…"
@@ -424,13 +424,13 @@ export function ClientView({ user }: ClientViewProps) {
 
             <div className="space-y-3">
               {shopLoading && (
-                <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>Buscando…</p>
+                <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>Buscando…</p>
               )}
               {!shopLoading && shops.length === 0 && (
                 <div className="text-center py-10 rounded-2xl"
                   style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.07)' }}>
-                  <Store size={22} style={{ color: 'rgba(113,113,122,0.4)', margin: '0 auto 10px' }} />
-                  <p style={{ color: 'rgba(113,113,122,0.6)', fontSize: '13px' }}>
+                  <Store size={22} style={{ color: 'rgba(113,113,122,0.52)', margin: '0 auto 10px' }} />
+                  <p style={{ color: 'rgba(113,113,122,0.82)', fontSize: '13px' }}>
                     {shopQuery ? 'Nenhuma barbearia encontrada para essa busca.' : 'Nenhuma barbearia disponível ainda.'}
                   </p>
                 </div>
@@ -457,12 +457,12 @@ export function ClientView({ user }: ClientViewProps) {
                     <div className="flex-1 text-left min-w-0">
                       <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }} className="truncate">{s.name}</div>
                       {addr ? (
-                        <div className="flex items-center gap-1 mt-1" style={{ color: 'rgba(113,113,122,0.65)', fontSize: '12px' }}>
+                        <div className="flex items-center gap-1 mt-1" style={{ color: 'rgba(113,113,122,0.77)', fontSize: '12px' }}>
                           <MapPin size={10} className="flex-shrink-0" />
                           <span className="truncate">{addr}</span>
                         </div>
                       ) : (
-                        <div style={{ color: 'rgba(113,113,122,0.45)', fontSize: '12px', marginTop: '2px' }}>Endereço não informado</div>
+                        <div style={{ color: 'rgba(113,113,122,0.58)', fontSize: '12px', marginTop: '2px' }}>Endereço não informado</div>
                       )}
                     </div>
                     {sel && <Check size={16} style={{ color: '#D4AF37', flexShrink: 0 }} />}
@@ -478,15 +478,15 @@ export function ClientView({ user }: ClientViewProps) {
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '26px', fontWeight: 700, color: 'white', marginBottom: '6px' }}>
               Escolha seu profissional
             </h2>
-            <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '12px', marginBottom: '20px' }}>
+            <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '12px', marginBottom: '20px' }}>
               Equipe da {selShop?.name}
             </p>
             <div className="space-y-3">
               {barberLoading && (
-                <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>Carregando equipe…</p>
+                <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>Carregando equipe…</p>
               )}
               {!barberLoading && barbers.length === 0 && (
-                <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+                <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>
                   Esta barbearia ainda não tem barbeiros disponíveis.
                 </p>
               )}
@@ -515,7 +515,7 @@ export function ClientView({ user }: ClientViewProps) {
                     </div>
                     <div className="flex-1 text-left">
                       <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>{b.name}</div>
-                      <div style={{ color: 'rgba(113,113,122,0.65)', fontSize: '12px', marginTop: '2px' }}>{b.specialty}</div>
+                      <div style={{ color: 'rgba(113,113,122,0.77)', fontSize: '12px', marginTop: '2px' }}>{b.specialty}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-1">
@@ -537,10 +537,10 @@ export function ClientView({ user }: ClientViewProps) {
               Qual serviço você deseja?
             </h2>
             {svcLoading && (
-              <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>Carregando catálogo…</p>
+              <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>Carregando catálogo…</p>
             )}
             {!svcLoading && services.length === 0 && (
-              <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+              <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>
                 Esta barbearia ainda não cadastrou serviços.
               </p>
             )}
@@ -565,7 +565,7 @@ export function ClientView({ user }: ClientViewProps) {
                     )}
                     <div style={{ fontSize: '22px', marginBottom: '10px' }}>{sv.emoji}</div>
                     <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '13px', marginBottom: '6px', lineHeight: 1.3 }}>{sv.name}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'rgba(113,113,122,0.7)', fontSize: '12px', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'rgba(113,113,122,0.86)', fontSize: '12px', marginBottom: '10px' }}>
                       <Clock size={11} />{sv.durationMin}min
                     </div>
                     <div style={{ color: sel ? '#D4AF37' : 'rgba(138,111,32,0.9)', fontWeight: 700, fontSize: '18px' }}>R$ {sv.price}</div>
@@ -582,14 +582,14 @@ export function ClientView({ user }: ClientViewProps) {
               Quando você prefere?
             </h2>
             <div className="mb-6">
-              <label style={{ fontSize: '11px', color: 'rgba(113,113,122,0.65)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '8px' }}>Data</label>
+              <label style={{ fontSize: '11px', color: 'rgba(113,113,122,0.77)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '8px' }}>Data</label>
               <input type="date" value={selDate} min={todayISO()}
                 onChange={e => { setSelDate(e.target.value); setSelTime(null) }}
                 className="w-full rounded-xl px-4 py-3 text-white text-sm outline-none"
                 style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', colorScheme: 'dark' }} />
             </div>
             <div>
-              <label style={{ fontSize: '11px', color: 'rgba(113,113,122,0.65)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '12px' }}>Horário</label>
+              <label style={{ fontSize: '11px', color: 'rgba(113,113,122,0.77)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '12px' }}>Horário</label>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {TIME_SLOTS.map((t, idx) => {
                   const sel      = selTime === t
@@ -603,7 +603,7 @@ export function ClientView({ user }: ClientViewProps) {
                       className="py-2 rounded-lg font-mono text-xs font-semibold"
                       style={{
                         background: sel ? '#D4AF37' : blocked ? 'rgba(255,255,255,0.012)' : 'rgba(255,255,255,0.028)',
-                        color: sel ? '#000' : blocked ? 'rgba(113,113,122,0.28)' : 'rgba(161,161,170,0.75)',
+                        color: sel ? '#000' : blocked ? 'rgba(113,113,122,0.64)' : 'rgba(161,161,170,0.84)',
                         border: `1px solid ${sel ? '#D4AF37' : 'rgba(255,255,255,0.06)'}`,
                         boxShadow: sel ? '0 0 22px rgba(212,175,55,0.35)' : 'none',
                         textDecoration: taken.has(t) ? 'line-through' : 'none',
@@ -616,7 +616,7 @@ export function ClientView({ user }: ClientViewProps) {
                 })}
               </div>
               {taken.size > 0 && (
-                <p style={{ fontSize: '11px', color: 'rgba(113,113,122,0.5)', marginTop: '10px' }}>
+                <p style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '10px' }}>
                   Horários riscados já estão reservados para {selBarber?.name.split(' ')[0]}.
                 </p>
               )}
@@ -647,18 +647,18 @@ export function ClientView({ user }: ClientViewProps) {
               <div className="px-6 py-5 space-y-3.5">
                 {selShop && formatAddress(selShop.address) && (
                   <div className="flex items-start justify-between gap-4 pb-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                    <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Endereço</span>
+                    <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.68)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Endereço</span>
                     <span className="text-right" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>{formatAddress(selShop.address)}</span>
                   </div>
                 )}
                 {[['Cliente', user.name], ['Serviço', selService?.name], ['Barbeiro', selBarber?.name], ['Data', selDate], ['Horário', selTime]].map(([k, v]) => (
                   <div key={k} className="flex justify-between items-center">
-                    <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k}</span>
+                    <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.68)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k}</span>
                     <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.88)', fontWeight: 500 }}>{v}</span>
                   </div>
                 ))}
                 <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                  <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.68)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total</span>
                   <span style={{ color: '#D4AF37', fontWeight: 700, fontSize: '22px' }}>R$ {selService?.price}</span>
                 </div>
               </div>
@@ -684,7 +684,7 @@ export function ClientView({ user }: ClientViewProps) {
       <div className="flex items-center justify-between mt-8">
         <button onClick={prev} disabled={step === 1}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors"
-          style={{ color: step === 1 ? 'rgba(113,113,122,0.3)' : 'rgba(113,113,122,0.7)', cursor: step === 1 ? 'not-allowed' : 'pointer' }}>
+          style={{ color: step === 1 ? 'rgba(113,113,122,0.52)' : 'rgba(113,113,122,0.86)', cursor: step === 1 ? 'not-allowed' : 'pointer' }}>
           <ChevronLeft size={15} />Voltar
         </button>
         {step < 5 && (
@@ -694,7 +694,7 @@ export function ClientView({ user }: ClientViewProps) {
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold"
             style={{
               background: canNext ? 'linear-gradient(135deg, #B8951F, #D4AF37)' : 'rgba(255,255,255,0.05)',
-              color: canNext ? '#000' : 'rgba(113,113,122,0.38)',
+              color: canNext ? '#000' : 'rgba(113,113,122,0.64)',
               boxShadow: canNext ? '0 0 24px rgba(212,175,55,0.22)' : 'none',
               cursor: canNext ? 'pointer' : 'not-allowed', letterSpacing: '0.02em',
             }}>

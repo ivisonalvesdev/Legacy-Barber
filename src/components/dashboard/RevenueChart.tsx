@@ -82,7 +82,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
             </g>
           )}
           <text x={p.x} y={H - 4} textAnchor="middle"
-            fill="rgba(161,161,170,0.45)" fontSize="10" fontFamily="DM Sans">{p.day}</text>
+            fill="rgba(161,161,170,0.58)" fontSize="10" fontFamily="DM Sans">{p.day}</text>
         </g>
       ))}
     </svg>

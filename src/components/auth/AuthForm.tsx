@@ -215,9 +215,9 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
         </motion.div>
         <div>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>
-          <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.45)', letterSpacing: '0.36em' }}>BARBER</div>
+          <div style={{ fontSize: '9px', fontWeight: 600, color: 'rgba(161,161,170,0.85)', letterSpacing: '0.3em', marginTop: '2px' }}>BARBER</div>
         </div>
-        <p className="ml-auto" style={{ color: 'rgba(113,113,122,0.55)', fontSize: '12px' }}>
+        <p className="ml-auto" style={{ color: 'rgba(113,113,122,0.68)', fontSize: '12px' }}>
           {mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
         </p>
       </div>
@@ -228,7 +228,7 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
         {(['login', 'register'] as const).map(m => (
           <button key={m} onClick={() => { setMode(m); setError('') }}
             className="relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-colors duration-200"
-            style={{ color: mode === m ? '#D4AF37' : 'rgba(113,113,122,0.6)', zIndex: 1 }}>
+            style={{ color: mode === m ? '#D4AF37' : 'rgba(113,113,122,0.82)', zIndex: 1 }}>
             {mode === m && (
               <motion.div layoutId="auth-tab"
                 className="absolute inset-0 rounded-xl"
@@ -247,7 +247,7 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
       {/* Role selector — só no cadastro */}
       {mode === 'register' ? (
         <div className="mb-5">
-          <p style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>
+          <p style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(113,113,122,0.64)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>
             Cadastrar como
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -278,9 +278,9 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
                       background: sel ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.04)',
                       border:     `1px solid ${sel ? 'rgba(212,175,55,0.3)' : 'rgba(255,255,255,0.06)'}`,
                     }}>
-                    <Icon size={14} style={{ color: sel ? '#D4AF37' : 'rgba(113,113,122,0.6)' }} />
+                    <Icon size={14} style={{ color: sel ? '#D4AF37' : 'rgba(113,113,122,0.82)' }} />
                   </div>
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: sel ? '#D4AF37' : 'rgba(161,161,170,0.65)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: sel ? '#D4AF37' : 'rgba(161,161,170,0.77)' }}>
                     {rc.label}
                   </span>
                 </motion.button>
@@ -325,7 +325,7 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
             value={form.password} onChange={set('password')}
             icon={Lock} placeholder="••••••••"
             rightEl={
-              <button onClick={() => setShowPass(p => !p)} style={{ color: 'rgba(113,113,122,0.5)' }}>
+              <button onClick={() => setShowPass(p => !p)} style={{ color: 'rgba(113,113,122,0.64)' }}>
                 {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             }

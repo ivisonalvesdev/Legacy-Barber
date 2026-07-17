@@ -32,7 +32,7 @@ export function StatCard({ icon: Icon, label, numValue, prefix = '', suffix = ''
         style={{ color: featured ? '#D4AF37' : 'white', fontFamily: "'DM Sans', sans-serif" }}>
         <AnimatedNumber value={numValue} prefix={prefix} suffix={suffix} />
       </div>
-      <div style={{ fontSize: '10px', color: 'rgba(113,113,122,0.7)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
+      <div style={{ fontSize: '10px', color: 'rgba(113,113,122,0.86)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
         {label}
       </div>
       {featured && (

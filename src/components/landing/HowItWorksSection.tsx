@@ -46,7 +46,7 @@ export function HowItWorksSection() {
                   </div>
                 </div>
                 <h3 style={{ fontWeight: 700, color: 'rgba(255,255,255,0.9)', fontSize: '16px', marginBottom: '10px' }}>{s.title}</h3>
-                <p style={{ color: 'rgba(113,113,122,0.65)', fontSize: '13px', lineHeight: 1.7 }}>{s.desc}</p>
+                <p style={{ color: 'rgba(113,113,122,0.77)', fontSize: '13px', lineHeight: 1.7 }}>{s.desc}</p>
               </motion.div>
             )
           })}

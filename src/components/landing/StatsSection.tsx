@@ -25,7 +25,7 @@ export function StatsSection() {
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(36px,4vw,56px)', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>
                 {s.prefix}<AnimatedNumber value={s.value} />{s.suffix}
               </div>
-              <div style={{ fontSize: '12px', color: 'rgba(113,113,122,0.6)', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+              <div style={{ fontSize: '12px', color: 'rgba(113,113,122,0.82)', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
                 {s.label}
               </div>
             </motion.div>

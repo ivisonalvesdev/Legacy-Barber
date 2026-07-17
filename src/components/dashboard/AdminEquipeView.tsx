@@ -114,7 +114,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
             Equipe
           </h1>
-          <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             {active.length} barbeiro{active.length !== 1 ? 's' : ''} ativo{active.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -175,7 +175,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
               </div>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: 'white', fontFamily: "'Cormorant Garamond', serif" }}>{k.value}</div>
-                <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)', marginTop: '1px' }}>{k.label}</div>
+                <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.68)', marginTop: '1px' }}>{k.label}</div>
               </div>
             </motion.div>
           )
@@ -188,7 +188,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <Scissors size={28} style={{ color: 'rgba(212,175,55,0.3)', margin: '0 auto 12px' }} />
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 500 }}>Nenhum barbeiro ainda</p>
-          <p style={{ color: 'rgba(113,113,122,0.5)', fontSize: '12px', marginTop: '4px' }}>
+          <p style={{ color: 'rgba(113,113,122,0.64)', fontSize: '12px', marginTop: '4px' }}>
             Compartilhe o código <strong style={{ color: '#D4AF37' }}>{inviteCode}</strong> para que eles se cadastrem.
           </p>
         </div>
@@ -197,7 +197,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
       {/* Cards dos barbeiros ativos */}
       {active.length > 0 && (
         <div>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.64)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
             Ativos
           </div>
           <div className="grid md:grid-cols-2 gap-4">
@@ -216,7 +216,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
                       <Avatar url={m.avatarUrl} fallback={m.avatar} size={44} rounded="xl" highlight />
                       <div>
                         <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>{m.name}</div>
-                        <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)', marginTop: '2px' }}>
+                        <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.68)', marginTop: '2px' }}>
                           <Scissors size={9} style={{ display: 'inline', marginRight: '4px' }} />{m.specialty}
                         </div>
                       </div>
@@ -238,7 +238,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
                       <div key={j} className="rounded-xl p-2.5 text-center"
                         style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.04)' }}>
                         <div style={{ fontWeight: 700, color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>{stat.value}</div>
-                        <div style={{ fontSize: '9px', color: 'rgba(113,113,122,0.5)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{stat.label}</div>
+                        <div style={{ fontSize: '9px', color: 'rgba(113,113,122,0.64)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{stat.label}</div>
                       </div>
                     ))}
                   </div>
@@ -252,7 +252,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
       {/* Inativos */}
       {inactive.length > 0 && (
         <div>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(113,113,122,0.52)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
             Inativos
           </div>
           <div className="grid md:grid-cols-2 gap-4">
@@ -266,14 +266,14 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
                   <Avatar url={m.avatarUrl} fallback={m.avatar} size={40} rounded="xl" />
                   <div>
                     <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.55)', fontSize: '13px' }}>{m.name}</div>
-                    <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.4)' }}>{m.specialty}</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.52)' }}>{m.specialty}</div>
                   </div>
                 </div>
                 <button onClick={() => toggleActive(m.id)}
                   className="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.5)' }}
+                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.64)' }}
                   onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(74,222,128,0.3)'; b.style.color = '#4ade80'; b.style.background = 'rgba(74,222,128,0.06)'; b.textContent = 'Ativar' }}
-                  onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(113,113,122,0.5)'; b.style.background = 'transparent'; b.textContent = 'Inativo' }}>
+                  onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(113,113,122,0.64)'; b.style.background = 'transparent'; b.textContent = 'Inativo' }}>
                   Inativo
                 </button>
               </motion.div>
@@ -301,7 +301,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
                     Convidar Barbeiro
                   </h3>
                 </div>
-                <button onClick={() => setInvite(false)} style={{ color: 'rgba(113,113,122,0.5)' }}>
+                <button onClick={() => setInvite(false)} style={{ color: 'rgba(113,113,122,0.64)' }}>
                   <X size={17} />
                 </button>
               </div>
@@ -328,7 +328,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
 
               <button onClick={() => setInvite(false)}
                 className="w-full py-2.5 rounded-xl text-sm font-medium"
-                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}>
+                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.86)' }}>
                 Fechar
               </button>
             </motion.div>

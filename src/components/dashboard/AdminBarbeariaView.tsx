@@ -37,7 +37,7 @@ const inputStyle = {
 }
 
 const labelStyle = {
-  fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)',
+  fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)',
   textTransform: 'uppercase' as const, letterSpacing: '0.08em',
 }
 
@@ -136,11 +136,11 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
   }
 
   if (loading) return (
-    <p className="text-center py-16" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>Carregando…</p>
+    <p className="text-center py-16" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>Carregando…</p>
   )
 
   if (!user.barbershopId) return (
-    <p className="text-center py-16" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+    <p className="text-center py-16" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>
       Nenhuma barbearia vinculada a esta conta.
     </p>
   )
@@ -151,7 +151,7 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
         <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
           Minha Barbearia
         </h1>
-        <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+        <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
           Estes dados são o que o cliente vê ao procurar por você
         </p>
       </div>
@@ -171,7 +171,7 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
               <div style={{ fontSize: '13px', fontWeight: 600, color: published ? '#4ade80' : '#D4AF37' }}>
                 {published ? 'Visível para clientes' : 'Fora da vitrine'}
               </div>
-              <p style={{ fontSize: '12px', color: 'rgba(161,161,170,0.6)', marginTop: '3px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '12px', color: 'rgba(161,161,170,0.82)', marginTop: '3px', lineHeight: 1.5 }}>
                 {published
                   ? 'Sua barbearia aparece na busca e pode receber agendamentos.'
                   : canPublish
@@ -188,7 +188,7 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
             className="px-4 py-2 rounded-xl text-xs font-semibold flex-shrink-0"
             style={{
               background: published ? 'rgba(255,255,255,0.05)' : canPublish ? 'linear-gradient(135deg, #B8951F, #D4AF37)' : 'rgba(255,255,255,0.03)',
-              color:      published ? 'rgba(161,161,170,0.8)' : canPublish ? '#000' : 'rgba(113,113,122,0.35)',
+              color:      published ? 'rgba(161,161,170,0.86)' : canPublish ? '#000' : 'rgba(113,113,122,0.46)',
               cursor:     published || canPublish ? 'pointer' : 'not-allowed',
             }}>
             {published ? 'Despublicar' : 'Publicar'}
@@ -197,8 +197,8 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
 
         {!canPublish && (
           <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <AlertCircle size={11} style={{ color: 'rgba(113,113,122,0.5)', flexShrink: 0 }} />
-            <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)' }}>
+            <AlertCircle size={11} style={{ color: 'rgba(113,113,122,0.64)', flexShrink: 0 }} />
+            <span style={{ fontSize: '11px', color: 'rgba(113,113,122,0.68)' }}>
               Falta preencher: {missing.map(m => FIELD_LABELS[m]).join(', ')}
             </span>
           </div>
@@ -318,7 +318,7 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
         className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
         style={{
           background: saved ? 'rgba(74,222,128,0.12)' : dirty ? 'linear-gradient(135deg, #B8951F, #D4AF37)' : 'rgba(255,255,255,0.04)',
-          color:      saved ? '#4ade80' : dirty ? '#000' : 'rgba(113,113,122,0.4)',
+          color:      saved ? '#4ade80' : dirty ? '#000' : 'rgba(113,113,122,0.52)',
           border:     saved ? '1px solid rgba(74,222,128,0.3)' : '1px solid transparent',
           cursor:     dirty && !saving ? 'pointer' : 'not-allowed',
         }}>

@@ -22,12 +22,12 @@ export const PRICING_DATA = [
     cta: 'Começar Grátis',
   },
   {
-    name: 'Pro',    price: 'R$ 97',  period: '/mês', recommended: true,
+    name: 'Pro',    price: 'R$ 29,90',  period: '/mês', recommended: true,
     features: ['Até 5 barbeiros', 'Agendamentos ilimitados', 'Notificações WhatsApp', 'Relatórios completos', 'Controle de estoque', 'Suporte prioritário'],
     cta: 'Começar Agora',
   },
   {
-    name: 'Business', price: 'R$ 197', period: '/mês', recommended: false,
+    name: 'Business', price: 'R$ 49,90', period: '/mês', recommended: false,
     features: ['Barbeiros ilimitados', 'Multi-unidades', 'API de integração', 'Gestor dedicado', 'SLA 99.9%', 'Onboarding personalizado'],
     cta: 'Falar com Vendas',
   },

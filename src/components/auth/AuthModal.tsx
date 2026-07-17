@@ -38,9 +38,9 @@ export function AuthModal({ open, onClose, initialMode = 'login', onAuth }: Auth
               >
                 <button onClick={onClose}
                   className="absolute -top-3 -right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full transition-colors"
-                  style={{ background: 'rgba(10,10,10,0.95)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(113,113,122,0.7)' }}
+                  style={{ background: 'rgba(10,10,10,0.95)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(113,113,122,0.86)' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#fff' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(113,113,122,0.7)' }}>
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(113,113,122,0.86)' }}>
                   <X size={14} />
                 </button>
                 <AuthForm

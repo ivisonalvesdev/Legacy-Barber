@@ -38,7 +38,7 @@ export function TestimonialsSection() {
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.88)', fontSize: '13px' }}>{t.name}</div>
-                  <div style={{ color: 'rgba(113,113,122,0.5)', fontSize: '11px', marginTop: '1px' }}>{t.shop}</div>
+                  <div style={{ color: 'rgba(113,113,122,0.64)', fontSize: '11px', marginTop: '1px' }}>{t.shop}</div>
                 </div>
               </div>
             </motion.div>

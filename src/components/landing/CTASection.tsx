@@ -27,7 +27,7 @@ export function CTASection({ onOpenAuth }: CTASectionProps) {
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(34px,4.5vw,64px)', fontWeight: 700, color: 'white', lineHeight: 1.1, marginBottom: '16px' }}>
             Pronto para transformar<br />sua barbearia?
           </h2>
-          <p style={{ color: 'rgba(113,113,122,0.65)', fontSize: '15px', marginBottom: '36px' }}>
+          <p style={{ color: 'rgba(113,113,122,0.77)', fontSize: '15px', marginBottom: '36px' }}>
             Sem cartão de crédito · Setup em 5 minutos · Suporte em português
           </p>
           <motion.button

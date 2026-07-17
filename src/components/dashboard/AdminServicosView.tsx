@@ -16,7 +16,7 @@ type Form = { name: string; price: string; duration: string; emoji: string; popu
 const EMPTY_FORM: Form = { name: '', price: '', duration: '30', emoji: '✂️', popular: false }
 
 const labelStyle = {
-  fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)',
+  fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)',
   textTransform: 'uppercase' as const, letterSpacing: '0.08em',
 }
 const inputStyle = {
@@ -125,7 +125,7 @@ export function AdminServicosView({ user }: AdminServicosViewProps) {
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '38px', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
             Serviços
           </h1>
-          <p style={{ color: 'rgba(113,113,122,0.55)', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             {items.length} no catálogo · {active} visíveis para o cliente — o preço daqui é o preço cobrado
           </p>
         </div>
@@ -146,7 +146,7 @@ export function AdminServicosView({ user }: AdminServicosViewProps) {
       )}
 
       {!loading && !errMsg && items.length === 0 && (
-        <p className="text-center py-10" style={{ color: 'rgba(113,113,122,0.5)', fontSize: '13px' }}>
+        <p className="text-center py-10" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>
           Nenhum serviço cadastrado. Adicione o primeiro para começar a receber agendamentos.
         </p>
       )}
@@ -181,12 +181,12 @@ export function AdminServicosView({ user }: AdminServicosViewProps) {
                       )}
                       {!s.active && (
                         <span className="px-2 py-0.5 rounded-full"
-                          style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(255,255,255,0.05)', color: 'rgba(113,113,122,0.7)', letterSpacing: '0.06em' }}>
+                          style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(255,255,255,0.05)', color: 'rgba(113,113,122,0.86)', letterSpacing: '0.06em' }}>
                           OCULTO
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-1" style={{ fontSize: '11px', color: 'rgba(113,113,122,0.55)' }}>
+                    <div className="flex items-center gap-1.5 mt-1" style={{ fontSize: '11px', color: 'rgba(113,113,122,0.68)' }}>
                       <Clock size={10} /> {s.durationMin} min
                     </div>
                   </div>
@@ -199,14 +199,14 @@ export function AdminServicosView({ user }: AdminServicosViewProps) {
               <div className="flex items-center gap-1.5 mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                 <button onClick={() => openEdit(s)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(161,161,170,0.7)' }}
+                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(161,161,170,0.86)' }}
                   onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(212,175,55,0.35)'; b.style.color = '#D4AF37' }}
-                  onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(161,161,170,0.7)' }}>
+                  onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(255,255,255,0.08)'; b.style.color = 'rgba(161,161,170,0.86)' }}>
                   <Pencil size={11} /> Editar
                 </button>
                 <button onClick={() => toggleActive(s)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(161,161,170,0.7)' }}
+                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(161,161,170,0.86)' }}
                   title={s.active ? 'Ocultar do agendamento' : 'Voltar a oferecer'}>
                   {s.active ? <EyeOff size={11} /> : <Eye size={11} />}
                   {s.active ? 'Ocultar' : 'Reativar'}
@@ -217,7 +217,7 @@ export function AdminServicosView({ user }: AdminServicosViewProps) {
                   style={{
                     border: `1px solid ${confirmDel === s.id ? 'rgba(239,68,68,0.4)' : 'transparent'}`,
                     background: confirmDel === s.id ? 'rgba(239,68,68,0.08)' : 'transparent',
-                    color: confirmDel === s.id ? '#f87171' : 'rgba(113,113,122,0.4)',
+                    color: confirmDel === s.id ? '#f87171' : 'rgba(113,113,122,0.52)',
                   }}>
                   <Trash2 size={11} /> {confirmDel === s.id ? 'Confirmar?' : ''}
                 </button>
@@ -246,7 +246,7 @@ export function AdminServicosView({ user }: AdminServicosViewProps) {
                     {modal === 'add' ? 'Novo Serviço' : 'Editar Serviço'}
                   </h3>
                 </div>
-                <button onClick={() => setModal(null)} style={{ color: 'rgba(113,113,122,0.5)' }}>
+                <button onClick={() => setModal(null)} style={{ color: 'rgba(113,113,122,0.64)' }}>
                   <X size={17} />
                 </button>
               </div>
@@ -297,13 +297,13 @@ export function AdminServicosView({ user }: AdminServicosViewProps) {
                     background: form.popular ? 'rgba(212,175,55,0.06)' : 'rgba(255,255,255,0.03)',
                     border: `1px solid ${form.popular ? 'rgba(212,175,55,0.3)' : 'rgba(255,255,255,0.07)'}`,
                   }}>
-                  <span className="flex items-center gap-2" style={{ fontSize: '13px', color: form.popular ? '#D4AF37' : 'rgba(161,161,170,0.7)' }}>
+                  <span className="flex items-center gap-2" style={{ fontSize: '13px', color: form.popular ? '#D4AF37' : 'rgba(161,161,170,0.86)' }}>
                     <Star size={13} /> Destacar como “Popular”
                   </span>
                   <div className="w-8 h-4.5 rounded-full relative transition-all"
                     style={{ height: '18px', background: form.popular ? 'rgba(212,175,55,0.45)' : 'rgba(255,255,255,0.08)' }}>
                     <div className="absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all"
-                      style={{ left: form.popular ? '16px' : '2px', background: form.popular ? '#D4AF37' : 'rgba(161,161,170,0.5)' }} />
+                      style={{ left: form.popular ? '16px' : '2px', background: form.popular ? '#D4AF37' : 'rgba(161,161,170,0.64)' }} />
                   </div>
                 </button>
               </div>
@@ -311,7 +311,7 @@ export function AdminServicosView({ user }: AdminServicosViewProps) {
               <div className="flex gap-2 mt-5">
                 <button onClick={() => setModal(null)}
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}>
+                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.86)' }}>
                   Cancelar
                 </button>
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}

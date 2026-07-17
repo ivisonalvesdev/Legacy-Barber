@@ -29,7 +29,7 @@ export function Sidebar({ user, activeTab, setActiveTab, onLogout }: SidebarProp
           </div>
           <div>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '17px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>
-            <div style={{ fontSize: '8px', color: 'rgba(113,113,122,0.5)', letterSpacing: '0.32em', marginTop: '2px' }}>BARBER</div>
+            <div style={{ fontSize: '9px', fontWeight: 600, color: 'rgba(161,161,170,0.85)', letterSpacing: '0.3em', marginTop: '3px' }}>BARBER</div>
           </div>
         </div>
       </div>
@@ -42,7 +42,7 @@ export function Sidebar({ user, activeTab, setActiveTab, onLogout }: SidebarProp
           return (
             <button key={item.id} onClick={() => setActiveTab(item.id)}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium relative transition-colors duration-150"
-              style={{ color: active ? '#D4AF37' : 'rgba(113,113,122,0.75)' }}>
+              style={{ color: active ? '#D4AF37' : 'rgba(113,113,122,0.84)' }}>
               {active && (
                 <motion.div layoutId="na"
                   className="absolute inset-0 rounded-xl"
@@ -69,12 +69,12 @@ export function Sidebar({ user, activeTab, setActiveTab, onLogout }: SidebarProp
             <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '12px', fontWeight: 600 }} className="truncate">
               {user.name.split(' ')[0]}
             </div>
-            <div style={{ color: 'rgba(113,113,122,0.55)', fontSize: '10px', textTransform: 'capitalize' }}>
+            <div style={{ color: 'rgba(113,113,122,0.68)', fontSize: '10px', textTransform: 'capitalize' }}>
               {user.role === 'admin' ? 'Proprietário' : user.role === 'barber' ? 'Barbeiro' : 'Cliente'}
             </div>
           </div>
           <motion.button whileHover={{ color: '#f87171', scale: 1.1 }} onClick={onLogout}
-            style={{ color: 'rgba(113,113,122,0.4)', flexShrink: 0 }} title="Sair">
+            style={{ color: 'rgba(113,113,122,0.52)', flexShrink: 0 }} title="Sair">
             <LogOut size={14} />
           </motion.button>
         </div>

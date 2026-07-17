@@ -126,18 +126,18 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
                   Novo Agendamento
                 </h3>
               </div>
-              <button onClick={onClose} style={{ color: 'rgba(113,113,122,0.5)' }}>
+              <button onClick={onClose} style={{ color: 'rgba(113,113,122,0.64)' }}>
                 <X size={17} />
               </button>
             </div>
 
-            <p style={{ fontSize: '12px', color: 'rgba(113,113,122,0.65)', marginBottom: '16px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '12px', color: 'rgba(113,113,122,0.77)', marginBottom: '16px', lineHeight: 1.5 }}>
               Para clientes que chegam sem conta (walk-in ou telefone).
             </p>
 
             <div className="space-y-3">
               <div>
-                <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   <User size={11} /> Nome do cliente
                 </label>
                 <input value={clientName} onChange={e => setClient(e.target.value)}
@@ -147,7 +147,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
               </div>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Barbeiro
                 </label>
                 <select value={barberId} onChange={e => { setBarberId(e.target.value); setTime('') }}
@@ -161,7 +161,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
               </div>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Serviço
                 </label>
                 <select value={serviceId} onChange={e => setServiceId(e.target.value)}
@@ -176,7 +176,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
               </div>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Data
                 </label>
                 <input type="date" value={date} min={new Date().toISOString().split('T')[0]}
@@ -186,7 +186,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
               </div>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Horário
                 </label>
                 <div className="grid grid-cols-4 gap-1.5 mt-1.5">
@@ -198,7 +198,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
                         className="py-1.5 rounded-lg font-mono text-[11px] font-semibold transition-all"
                         style={{
                           background: sel ? '#D4AF37' : blocked ? 'rgba(255,255,255,0.012)' : 'rgba(255,255,255,0.03)',
-                          color: sel ? '#000' : blocked ? 'rgba(113,113,122,0.25)' : 'rgba(161,161,170,0.7)',
+                          color: sel ? '#000' : blocked ? 'rgba(113,113,122,0.34)' : 'rgba(161,161,170,0.86)',
                           border: `1px solid ${sel ? '#D4AF37' : 'rgba(255,255,255,0.06)'}`,
                           textDecoration: blocked ? 'line-through' : 'none',
                           cursor: blocked ? 'not-allowed' : 'pointer',
@@ -221,7 +221,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
             <div className="flex gap-2 mt-5">
               <button onClick={onClose}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium"
-                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.7)' }}>
+                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(113,113,122,0.86)' }}>
                 Cancelar
               </button>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}

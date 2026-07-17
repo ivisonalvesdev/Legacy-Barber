@@ -91,7 +91,7 @@ export function ImageUpload({
 
   return (
     <div>
-      <p style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
+      <p style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
         {label}
       </p>
 
@@ -128,7 +128,7 @@ export function ImageUpload({
             </button>
           )}
 
-          <p style={{ fontSize: '10px', color: 'rgba(113,113,122,0.45)' }}>
+          <p style={{ fontSize: '10px', color: 'rgba(113,113,122,0.58)' }}>
             JPG, PNG ou WEBP · recortada em quadrado
           </p>
         </div>

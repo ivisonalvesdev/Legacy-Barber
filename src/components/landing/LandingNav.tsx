@@ -44,7 +44,7 @@ export function LandingNav({ onOpenAuth }: LandingNavProps) {
           </div>
           <div>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>
-            <div style={{ fontSize: '7px', color: 'rgba(113,113,122,0.45)', letterSpacing: '0.36em' }}>BARBER</div>
+            <div style={{ fontSize: '9px', fontWeight: 600, color: 'rgba(161,161,170,0.85)', letterSpacing: '0.3em', marginTop: '2px' }}>BARBER</div>
           </div>
         </button>
 
@@ -53,9 +53,9 @@ export function LandingNav({ onOpenAuth }: LandingNavProps) {
           {[['Recursos', 'features'], ['Como Funciona', 'how-it-works'], ['Preços', 'pricing']].map(([label, id]) => (
             <button key={id} onClick={() => scrollTo(id)}
               className="text-sm font-medium transition-colors duration-200"
-              style={{ color: 'rgba(113,113,122,0.7)' }}
+              style={{ color: 'rgba(113,113,122,0.86)' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#D4AF37' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(113,113,122,0.7)' }}>
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(113,113,122,0.86)' }}>
               {label}
             </button>
           ))}
@@ -66,9 +66,9 @@ export function LandingNav({ onOpenAuth }: LandingNavProps) {
           <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
             onClick={() => onOpenAuth('login')}
             className="hidden md:flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
-            style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.7)' }}
+            style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.86)' }}
             onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(212,175,55,0.25)'; b.style.color = '#D4AF37' }}
-            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.07)'; b.style.color = 'rgba(161,161,170,0.7)' }}>
+            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.07)'; b.style.color = 'rgba(161,161,170,0.86)' }}>
             <LogIn size={13} /> Entrar
           </motion.button>
           <motion.button
@@ -78,7 +78,7 @@ export function LandingNav({ onOpenAuth }: LandingNavProps) {
             style={{ background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)', letterSpacing: '0.01em' }}>
             <UserPlus size={13} /> Começar Grátis
           </motion.button>
-          <button className="md:hidden" onClick={() => setMob(o => !o)} style={{ color: 'rgba(113,113,122,0.7)' }}>
+          <button className="md:hidden" onClick={() => setMob(o => !o)} style={{ color: 'rgba(113,113,122,0.86)' }}>
             {mob ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
@@ -94,14 +94,14 @@ export function LandingNav({ onOpenAuth }: LandingNavProps) {
             {[['Recursos', 'features'], ['Como Funciona', 'how-it-works'], ['Preços', 'pricing']].map(([label, id]) => (
               <button key={id} onClick={() => scrollTo(id)}
                 className="w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors"
-                style={{ color: 'rgba(161,161,170,0.7)' }}>
+                style={{ color: 'rgba(161,161,170,0.86)' }}>
                 {label}
               </button>
             ))}
             <div className="pt-2 flex gap-2">
               <button onClick={() => { onOpenAuth('login'); setMob(false) }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium text-center"
-                style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.7)' }}>
+                style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.86)' }}>
                 Entrar
               </button>
               <button onClick={() => { onOpenAuth('register'); setMob(false) }}
