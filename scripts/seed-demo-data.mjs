@@ -62,56 +62,6 @@ const MAIN_ADDRESS = {
   address_zip:      '01304-001',
 }
 
-// Vitrine: com uma barbearia só a busca não teria o que mostrar. Estas existem
-// para o cliente escolher entre opções reais (cada uma com equipe e catálogo
-// próprios), mas sem histórico de agendamentos — quem tem números é a principal.
-const SHOWCASE = [
-  {
-    ownerEmail: 'shop2.demo@legacybarber.com', ownerName: 'Marina Duarte',
-    name: 'Barbearia do Zé',
-    fields: {
-      description: 'Tradição carioca em corte e barba, de frente para o mar.',
-      phone: '(21) 2547-1122',
-      address_street: 'Rua Barata Ribeiro', address_number: '502',
-      address_district: 'Copacabana', address_city: 'Rio de Janeiro',
-      address_state: 'RJ', address_zip: '22040-002',
-    },
-    barbers: [
-      { email: 'ze1.demo@legacybarber.com', name: 'José Antunes',  specialty: 'Barba Clássica' },
-      { email: 'ze2.demo@legacybarber.com', name: 'Wesley Pires',  specialty: 'Degradê'        },
-    ],
-  },
-  {
-    ownerEmail: 'shop3.demo@legacybarber.com', ownerName: 'Otávio Ramalho',
-    name: 'Navalha de Ouro',
-    fields: {
-      description: 'Barbearia premium na Savassi. Navalha, toalha quente e café.',
-      phone: '(31) 3271-4400',
-      address_street: 'Rua Pernambuco', address_number: '1023',
-      address_district: 'Savassi', address_city: 'Belo Horizonte',
-      address_state: 'MG', address_zip: '30130-151',
-    },
-    barbers: [
-      { email: 'navalha1.demo@legacybarber.com', name: 'Túlio Medeiros', specialty: 'Navalha & Toalha Quente' },
-    ],
-  },
-  {
-    ownerEmail: 'shop4.demo@legacybarber.com', ownerName: 'Sandra Kubo',
-    name: 'Corte & Cia',
-    fields: {
-      description: 'Cortes modernos no Batel, com hora marcada.',
-      phone: '(41) 3232-9090',
-      address_street: 'Avenida do Batel', address_number: '340',
-      address_district: 'Batel', address_city: 'Curitiba',
-      address_state: 'PR', address_zip: '80420-090',
-    },
-    barbers: [
-      { email: 'corte1.demo@legacybarber.com', name: 'Henrique Sato', specialty: 'Cortes Modernos' },
-      { email: 'corte2.demo@legacybarber.com', name: 'Bruno Tavares', specialty: 'Social & Infantil' },
-    ],
-  },
-]
-
 const CLIENT_NAMES = [
   'Pedro Cliente', 'Lucas Andrade', 'Mateus Ribeiro', 'Bruno Carvalho',
   'Felipe Souza', 'Gustavo Lima', 'Rodrigo Pinto', 'André Barbosa',
@@ -240,38 +190,14 @@ async function main() {
   await admin.from('profiles')
     .update({ barbershop_id: shopId, active: true })
     .in('id', barberIds)
-  console.log(`✂️   Equipe: ${BARBERS.length} barbeiros`)
 
-  // ── 2b. Outras barbearias da vitrine ──────────────────────────
-  for (const s of SHOWCASE) {
-    const ownerId = await ensureUser(users, {
-      email: s.ownerEmail, name: s.ownerName, role: 'admin', phone: '11970000000',
-    })
-    await waitForProfiles([ownerId])
-
-    // O trigger on_barbershop_created semeia o catálogo de serviços padrão
-    let { data: sShop } = await admin.from('barbershops')
-      .select('id').eq('owner_id', ownerId).limit(1).maybeSingle()
-    if (!sShop) {
-      const { data: created, error: cErr } = await admin.from('barbershops')
-        .insert({ name: s.name, owner_id: ownerId }).select('id').single()
-      if (cErr) throw new Error(`barbearia ${s.name}: ${cErr.message}`)
-      sShop = created
-    }
-
-    await admin.from('barbershops')
-      .update({ name: s.name, ...s.fields, published: true }).eq('id', sShop.id)
-    await admin.from('profiles').update({ barbershop_id: sShop.id }).eq('id', ownerId)
-
-    const ids = []
-    for (const b of s.barbers) {
-      ids.push(await ensureUser(users, { ...b, role: 'barber', phone: '11970000001' }))
-    }
-    await waitForProfiles(ids)
-    await admin.from('profiles')
-      .update({ barbershop_id: sShop.id, active: true }).in('id', ids)
-  }
-  console.log(`🔎  Vitrine: +${SHOWCASE.length} barbearias em outras cidades`)
+  // O dono também atende: ganha especialidade e entra na agenda como
+  // barbeiro — aparece com o selo DONO na vitrine e no painel Equipe.
+  await admin.from('profiles')
+    .update({ specialty: 'Clássico & Navalha', active: true })
+    .eq('id', owner.id)
+  const workingBarbers = [owner.id, ...barberIds]
+  console.log(`✂️   Equipe: ${BARBERS.length} barbeiros + o dono atendendo`)
 
   // ── 3. Clientes ───────────────────────────────────────────────
   const clientIds = []
@@ -343,7 +269,7 @@ async function main() {
         const at  = new Date(mStart.getFullYear(), mStart.getMonth(), day, randInt(8, 19), randInt(0, 59))
         movRows.push({
           barbershop_id: shopId, product_id: p.id, product_name: p.name,
-          profile_id: pick(barberIds), type: 'out', qty, unit_cost: Number(p.cost),
+          profile_id: pick(workingBarbers), type: 'out', qty, unit_cost: Number(p.cost),
           created_at: at.toISOString(),
         })
       }
@@ -376,7 +302,7 @@ async function main() {
     const busy     = day === 6 ? 1.15 : day === 1 ? 0.75 : 1 // sáb cheio, seg fraco
 
     const dayRows = []
-    for (const barberId of barberIds) {
+    for (const barberId of workingBarbers) {
       const target = Math.min(TIME_SLOTS.length, Math.round(randInt(7, 11) * growth * busy))
       const slots  = [...TIME_SLOTS].sort(() => rnd() - 0.5).slice(0, target).sort()
 
@@ -421,7 +347,7 @@ async function main() {
   const todayRows   = rows.filter(r => r.date === iso(today))
   const doneToday   = todayRows.filter(r => r.status === 'done')
   const revToday    = doneToday.reduce((s, r) => s + r.service_price, 0)
-  const capacity    = TIME_SLOTS.length * barberIds.length
+  const capacity    = TIME_SLOTS.length * workingBarbers.length
   const occupation  = Math.round((todayRows.length / capacity) * 100)
   const revTotal    = rows.filter(r => r.status === 'done').reduce((s, r) => s + r.service_price, 0)
 
@@ -432,7 +358,7 @@ async function main() {
   console.log(`  🧾  Livro-caixa ........ ${movRows.length} movimentações de insumos`)
   console.log(`  📊  Hoje ............... ${todayRows.length} atend. · ${occupation}% ocupação`)
   console.log(`  💵  Faturamento hoje ... R$ ${revToday.toLocaleString('pt-BR')}`)
-  console.log(`  🏪  Barbearias na busca  ${SHOWCASE.length + 1}\n`)
+  console.log(`  🏪  Barbearia na busca . apenas "${SHOP_NAME}"\n`)
   console.log('  ▶️   Entre com admin.demo@legacybarber.com / Demo@2024')
   console.log('  ♻️   Re-rode este script antes de gravar para atualizar as datas.')
   console.log('═'.repeat(58) + '\n')

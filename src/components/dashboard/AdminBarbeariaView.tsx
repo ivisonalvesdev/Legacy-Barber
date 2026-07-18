@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Store, MapPin, Phone, Check, Eye, EyeOff, AlertCircle, FileText } from 'lucide-react'
+import { Store, MapPin, Phone, Check, Eye, EyeOff, AlertCircle, FileText, Loader2, Building2 } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
 import { ImageUpload } from '../ui/ImageUpload'
+import { lookupCep, lookupCnpj, formatCnpj, isCnpjComplete } from '../../lib/integrations'
 
 interface AdminBarbeariaViewProps {
   user: AppUser
@@ -11,13 +12,13 @@ interface AdminBarbeariaViewProps {
 }
 
 type Form = {
-  name: string; description: string; phone: string
+  name: string; description: string; phone: string; cnpj: string; legalName: string
   street: string; number: string; district: string
   city: string; state: string; zip: string
 }
 
 const EMPTY: Form = {
-  name: '', description: '', phone: '',
+  name: '', description: '', phone: '', cnpj: '', legalName: '',
   street: '', number: '', district: '', city: '', state: '', zip: '',
 }
 
@@ -41,6 +42,9 @@ const labelStyle = {
   textTransform: 'uppercase' as const, letterSpacing: '0.08em',
 }
 
+type CepStatus  = 'idle' | 'loading' | 'ok' | 'error'
+type CnpjStatus = 'idle' | 'loading' | 'ok' | 'error' | 'inactive'
+
 export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) {
   const [form, setForm]         = useState<Form>(EMPTY)
   const [initial, setInitial]   = useState<Form>(EMPTY)
@@ -51,12 +55,14 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
   const [saving, setSaving]     = useState(false)
   const [saved, setSaved]       = useState(false)
   const [error, setError]       = useState('')
+  const [cepStatus, setCepStatus]   = useState<CepStatus>('idle')
+  const [cnpjStatus, setCnpjStatus] = useState<CnpjStatus>('idle')
 
   const load = useCallback(async () => {
     if (!user.barbershopId) { setLoading(false); return }
     const { data, error: err } = await supabase
       .from('barbershops')
-      .select('id,name,description,phone,logo_url,published,address_street,address_number,address_district,address_city,address_state,address_zip')
+      .select('id,name,description,phone,cnpj,legal_name,logo_url,published,address_street,address_number,address_district,address_city,address_state,address_zip')
       .eq('id', user.barbershopId)
       .single()
 
@@ -66,6 +72,8 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
       name:        data.name              ?? '',
       description: data.description       ?? '',
       phone:       data.phone             ?? '',
+      cnpj:        data.cnpj              ?? '',
+      legalName:   data.legal_name        ?? '',
       street:      data.address_street    ?? '',
       number:      data.address_number    ?? '',
       district:    data.address_district  ?? '',
@@ -84,6 +92,75 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
 
   const set = (k: keyof Form) => (v: string) => setForm(p => ({ ...p, [k]: v }))
 
+  // ── CEP → ViaCEP ─────────────────────────────────────────────
+  // O CEP é a porta de entrada do endereço: os demais campos ficam
+  // bloqueados até a consulta preencher tudo sozinha. Se a barbearia já
+  // tem endereço salvo (ou o CEP não existe na base), destrava para edição.
+  const hasAddress      = !!(initial.street.trim() || initial.city.trim() || initial.district.trim())
+  const addressUnlocked = hasAddress || cepStatus === 'ok' || cepStatus === 'error'
+                       || cnpjStatus === 'ok' || cnpjStatus === 'inactive'
+
+  const formatCep = (v: string) => {
+    const d = v.replace(/\D/g, '').slice(0, 8)
+    return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+  }
+
+  const onZipChange = async (raw: string) => {
+    const masked = formatCep(raw)
+    setForm(p => ({ ...p, zip: masked }))
+
+    const digits = masked.replace(/\D/g, '')
+    if (digits.length !== 8) {
+      if (cepStatus === 'ok' || cepStatus === 'error') setCepStatus('idle')
+      return
+    }
+
+    setCepStatus('loading')
+    const r = await lookupCep(digits)
+    if (!r) { setCepStatus('error'); return } // libera preenchimento manual
+    setForm(p => ({
+      ...p,
+      street:   r.street   || p.street,
+      district: r.district || p.district,
+      city:     r.city     || p.city,
+      state:    r.state    || p.state,
+    }))
+    setCepStatus('ok')
+  }
+
+  // ── CNPJ → BrasilAPI ─────────────────────────────────────────
+  // Opcional. Quando preenchido, puxa razão social, nome fantasia, telefone
+  // e endereço completo — o caminho rápido para quem tem empresa formalizada.
+  const onCnpjChange = async (raw: string) => {
+    const masked = formatCnpj(raw)
+    setForm(p => ({ ...p, cnpj: masked }))
+    if (!isCnpjComplete(masked)) {
+      if (cnpjStatus !== 'idle') setCnpjStatus('idle')
+      return
+    }
+
+    setCnpjStatus('loading')
+    const r = await lookupCnpj(masked)
+    if (!r) { setCnpjStatus('error'); return }
+    setForm(p => ({
+      ...p,
+      legalName: r.legalName || p.legalName,
+      name:      p.name.trim()  || r.tradeName || r.legalName,
+      phone:     p.phone.trim() || r.phone,
+      street:    r.street   || p.street,
+      number:    r.number   || p.number,
+      district:  r.district || p.district,
+      city:      r.city     || p.city,
+      state:     r.state    || p.state,
+      zip:       r.zip ? formatCep(r.zip) : p.zip,
+    }))
+    setCnpjStatus(r.active ? 'ok' : 'inactive')
+  }
+
+  const lockedStyle = addressUnlocked
+    ? inputStyle
+    : { ...inputStyle, opacity: 0.4, cursor: 'not-allowed' }
+
   const missing    = REQUIRED.filter(k => !form[k].trim())
   const canPublish = missing.length === 0
   const dirty      = (Object.keys(form) as (keyof Form)[]).some(k => form[k].trim() !== initial[k].trim())
@@ -101,6 +178,8 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
       name:             form.name.trim(),
       description:      form.description.trim() || null,
       phone:            form.phone.trim() || null,
+      cnpj:             form.cnpj.trim() || null,
+      legal_name:       form.legalName.trim() || null,
       address_street:   form.street.trim() || null,
       address_number:   form.number.trim() || null,
       address_district: form.district.trim() || null,
@@ -245,59 +324,129 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
             placeholder="(11) 99999-0000"
             className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={inputStyle} />
         </div>
+
+        <div>
+          <label className="flex items-center gap-1.5" style={labelStyle}>
+            <Building2 size={11} /> CNPJ <span style={{ textTransform: 'none', letterSpacing: 0, opacity: 0.6 }}>(opcional — preenche seus dados automaticamente)</span>
+          </label>
+          <div className="relative">
+            <input value={form.cnpj} onChange={e => onCnpjChange(e.target.value)}
+              placeholder="00.000.000/0000-00" inputMode="numeric"
+              className="w-full mt-1.5 px-3 py-2.5 pr-8 rounded-xl outline-none text-sm" style={inputStyle} />
+            <span className="absolute right-2.5" style={{ top: 'calc(50% - 4px)' }}>
+              {cnpjStatus === 'loading' && <Loader2 size={13} className="animate-spin" style={{ color: '#D4AF37' }} />}
+              {cnpjStatus === 'ok'       && <Check size={13} style={{ color: '#4ade80' }} />}
+              {cnpjStatus === 'inactive' && <AlertCircle size={13} style={{ color: '#D4AF37' }} />}
+              {cnpjStatus === 'error'    && <AlertCircle size={13} style={{ color: '#f87171' }} />}
+            </span>
+          </div>
+          {cnpjStatus !== 'idle' && (
+            <p style={{
+              fontSize: '11px', marginTop: '6px', lineHeight: 1.5,
+              color: cnpjStatus === 'error' ? '#f87171'
+                   : cnpjStatus === 'inactive' ? '#D4AF37'
+                   : cnpjStatus === 'ok' ? '#4ade80'
+                   : 'rgba(113,113,122,0.7)',
+            }}>
+              {cnpjStatus === 'loading'  ? 'Consultando CNPJ…'
+                : cnpjStatus === 'ok'       ? `Dados preenchidos${form.legalName ? ` — ${form.legalName}` : ''}. Confira o número e o resto.`
+                : cnpjStatus === 'inactive' ? `Empresa com situação cadastral inativa na Receita${form.legalName ? ` — ${form.legalName}` : ''}. Os dados foram preenchidos mesmo assim.`
+                : 'CNPJ não encontrado. Preencha os dados manualmente.'}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Endereço */}
       <div className="rounded-2xl p-6 space-y-4"
         style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center gap-2 mb-1">
-          <MapPin size={13} style={{ color: '#D4AF37' }} />
-          <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px' }}>Endereço</h3>
+        <div className="mb-1">
+          <div className="flex items-center gap-2">
+            <MapPin size={13} style={{ color: '#D4AF37' }} />
+            <h3 style={{ color: 'rgba(255,255,255,0.88)', fontWeight: 600, fontSize: '14px' }}>Endereço</h3>
+          </div>
+          <p style={{ fontSize: '12px', color: 'rgba(113,113,122,0.72)', marginTop: '4px' }}>
+            Digite o CEP e o endereço se preenche sozinho.
+          </p>
+        </div>
+
+        {/* CEP primeiro: é ele quem destrava os demais campos */}
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label style={labelStyle}>CEP</label>
+            <div className="relative">
+              <input value={form.zip} onChange={e => onZipChange(e.target.value)}
+                placeholder="01310-100" inputMode="numeric"
+                className="w-full mt-1.5 px-3 py-2.5 pr-8 rounded-xl outline-none text-sm"
+                style={{
+                  ...inputStyle,
+                  borderColor: cepStatus === 'ok' ? 'rgba(74,222,128,0.35)'
+                             : cepStatus === 'error' ? 'rgba(239,68,68,0.35)'
+                             : 'rgba(212,175,55,0.3)',
+                }} />
+              <span className="absolute right-2.5" style={{ top: 'calc(50% - 4px)' }}>
+                {cepStatus === 'loading' && (
+                  <Loader2 size={13} className="animate-spin" style={{ color: '#D4AF37' }} />
+                )}
+                {cepStatus === 'ok' && <Check size={13} style={{ color: '#4ade80' }} />}
+                {cepStatus === 'error' && <AlertCircle size={13} style={{ color: '#f87171' }} />}
+              </span>
+            </div>
+          </div>
+          <div className="col-span-2 flex items-end pb-1">
+            <span style={{
+              fontSize: '11px', lineHeight: 1.5,
+              color: cepStatus === 'error' ? '#f87171'
+                   : cepStatus === 'ok' ? '#4ade80'
+                   : 'rgba(113,113,122,0.6)',
+            }}>
+              {cepStatus === 'loading' ? 'Buscando endereço…'
+                : cepStatus === 'ok' ? 'Endereço encontrado! Confira e informe o número.'
+                : cepStatus === 'error' ? 'CEP não encontrado — preencha o endereço manualmente.'
+                : addressUnlocked ? '' : 'Os campos abaixo destravam após o CEP.'}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2">
             <label style={labelStyle}>Rua</label>
             <input value={form.street} onChange={e => set('street')(e.target.value)}
-              placeholder="Av. Paulista"
-              className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={inputStyle} />
+              placeholder={addressUnlocked ? 'Av. Paulista' : 'Preencha o CEP primeiro'}
+              disabled={!addressUnlocked}
+              className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={lockedStyle} />
           </div>
           <div>
             <label style={labelStyle}>Número</label>
             <input value={form.number} onChange={e => set('number')(e.target.value)}
-              placeholder="1000"
-              className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={inputStyle} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label style={labelStyle}>Bairro</label>
-            <input value={form.district} onChange={e => set('district')(e.target.value)}
-              placeholder="Bela Vista"
-              className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>CEP <span style={{ textTransform: 'none', letterSpacing: 0, opacity: 0.6 }}>(opcional)</span></label>
-            <input value={form.zip} onChange={e => set('zip')(e.target.value)}
-              placeholder="01310-100"
-              className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={inputStyle} />
+              placeholder={addressUnlocked ? '1000' : '—'}
+              disabled={!addressUnlocked}
+              className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={lockedStyle} />
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <div className="col-span-2">
+          <div>
+            <label style={labelStyle}>Bairro</label>
+            <input value={form.district} onChange={e => set('district')(e.target.value)}
+              placeholder={addressUnlocked ? 'Bela Vista' : '—'}
+              disabled={!addressUnlocked}
+              className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={lockedStyle} />
+          </div>
+          <div>
             <label style={labelStyle}>Cidade</label>
             <input value={form.city} onChange={e => set('city')(e.target.value)}
-              placeholder="São Paulo"
-              className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={inputStyle} />
+              placeholder={addressUnlocked ? 'São Paulo' : '—'}
+              disabled={!addressUnlocked}
+              className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm" style={lockedStyle} />
           </div>
           <div>
             <label style={labelStyle}>UF</label>
             {/* Select em vez de texto: UF errada some da busca por cidade/estado */}
             <select value={form.state} onChange={e => set('state')(e.target.value)}
+              disabled={!addressUnlocked}
               className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm"
-              style={{ ...inputStyle, colorScheme: 'dark' }}>
+              style={{ ...lockedStyle, colorScheme: 'dark' }}>
               <option value="">—</option>
               {UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
             </select>

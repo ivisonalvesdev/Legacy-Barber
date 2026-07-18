@@ -4,6 +4,7 @@ import { CalendarPlus, X, Check, User } from 'lucide-react'
 import type { AppUser, Service } from '../../types'
 import { TIME_SLOTS, DEFAULT_SERVICES } from '../../data/defaults'
 import { supabase } from '../../lib/supabase'
+import { fireEvent } from '../../lib/integrations'
 
 interface NewBookingModalProps {
   user:      AppUser
@@ -31,12 +32,15 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
   useEffect(() => {
     if (!open || !user.barbershopId) return
     supabase.from('profiles')
-      .select('id, name')
+      .select('id, name, role')
       .eq('barbershop_id', user.barbershopId)
-      .eq('role', 'barber')
+      .in('role', ['barber', 'admin'])
       .eq('active', true)
       .then(({ data }) => {
-        const opts = data ?? []
+        // CEO primeiro e sinalizado — walk-in também pode cair com ele
+        const opts = (data ?? [])
+          .sort((a, b) => Number(b.role === 'admin') - Number(a.role === 'admin'))
+          .map(b => ({ id: b.id, name: b.role === 'admin' ? `${b.name} · CEO` : b.name }))
         setBarbers(opts)
         if (opts.length > 0 && !barberId) setBarberId(opts[0].id)
       })
@@ -96,6 +100,18 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
         : 'Erro ao criar agendamento. Execute supabase/setup_final.sql se ainda não rodou.')
       return
     }
+    // Automação (n8n): mesmo evento do agendamento pelo cliente, marcado
+    // como walk-in. O barbeiro é conhecido pelo id; nome resolvido no n8n.
+    fireEvent('booking.created', {
+      source:        'walk-in',
+      barbershop:    { id: user.barbershopId, name: user.barbershopName ?? null },
+      client:        { id: null, name: clientName.trim() },
+      barber:        { id: barberId },
+      service:       { name: svc.name, price: svc.price },
+      date,
+      time,
+    })
+
     setClient(''); setTime('')
     onCreated()
     onClose()

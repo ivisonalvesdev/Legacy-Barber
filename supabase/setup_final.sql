@@ -54,6 +54,9 @@ CREATE TABLE IF NOT EXISTS public.barbershops (
   description      TEXT,
   phone            TEXT,
   logo_url         TEXT,
+  -- Empresa (opcional): preenchidos via BrasilAPI a partir do CNPJ
+  cnpj             TEXT,
+  legal_name       TEXT,
   address_street   TEXT,
   address_number   TEXT,
   address_district TEXT,
@@ -149,6 +152,8 @@ ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS plan        TEXT NOT NUL
 ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS description      TEXT;
 ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS phone            TEXT;
 ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS logo_url         TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS cnpj             TEXT;
+ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS legal_name       TEXT;
 ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS address_street   TEXT;
 ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS address_number   TEXT;
 ALTER TABLE public.barbershops ADD COLUMN IF NOT EXISTS address_district TEXT;
@@ -303,11 +308,12 @@ $$;
 -- para impedir que o cliente monte um booking com barbeiro de uma barbearia e
 -- barbershop_id de outra (o front deriva certo, mas a API aceitaria na mão).
 -- SECURITY DEFINER: a checagem não pode depender do que o cliente enxerga.
+-- Admin também conta: o dono pode atender clientes como barbeiro.
 CREATE OR REPLACE FUNCTION public.barber_shop_id(p_barber UUID)
 RETURNS UUID LANGUAGE SQL SECURITY DEFINER STABLE
 SET search_path = public AS $$
   SELECT barbershop_id FROM public.profiles
-  WHERE id = p_barber AND role = 'barber' AND active
+  WHERE id = p_barber AND role IN ('barber', 'admin') AND active
 $$;
 
 -- Confere que nome e preço batem com um serviço ativo do catálogo da barbearia.
@@ -436,9 +442,13 @@ CREATE POLICY "read own profile" ON public.profiles
 CREATE POLICY "update own profile" ON public.profiles
   FOR UPDATE USING (id = auth.uid());
 
--- Cliente precisa listar barbeiros para agendar
+-- Cliente precisa listar barbeiros para agendar. O dono (admin) também
+-- aparece: muitas vezes ele é um dos barbeiros da própria barbearia.
 CREATE POLICY "read barber profiles" ON public.profiles
-  FOR SELECT USING (role = 'barber');
+  FOR SELECT USING (
+    role = 'barber'
+    OR (role = 'admin' AND barbershop_id IS NOT NULL)
+  );
 
 -- Admin/barbeiro vê perfis da mesma barbearia
 CREATE POLICY "staff reads shop profiles" ON public.profiles

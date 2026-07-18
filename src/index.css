@@ -77,5 +77,28 @@ button, input, textarea, select { font: inherit; }
   100% { background-position:  200% center; }
 }
 
+/* ── Tesoura com movimento de corte (SnipScissors) ───────
+   Cada metade da tesoura gira em torno do parafuso (12,12 no viewBox),
+   em sentidos opostos — as lâminas abrem e fecham como um corte real.
+   transform-box: view-box faz o transform-origin valer no viewBox. */
+@keyframes snip-blade-a {
+  0%, 100% { transform: rotate(10deg); }
+  45%, 55% { transform: rotate(-8deg); }
+}
+@keyframes snip-blade-b {
+  0%, 100% { transform: rotate(-10deg); }
+  45%, 55% { transform: rotate(8deg); }
+}
+.snip-a, .snip-b {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  animation: snip-blade-a var(--snip-dur, 1.8s) ease-in-out infinite;
+  animation-delay: var(--snip-delay, 0s);
+}
+.snip-b { animation-name: snip-blade-b; }
+@media (prefers-reduced-motion: reduce) {
+  .snip-a, .snip-b { animation: none; }
+}
+
 html { scroll-behavior: smooth; }
 body { overflow-x: hidden; }

@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react'
 import { AmbientBackground } from '../ui/AmbientBackground'
 import { TechGrid } from '../ui/TechGrid'
 import { FloatingParticles } from '../ui/FloatingParticles'
+import { FloatingScissors } from '../ui/FloatingScissors'
 import { DashboardMockup } from './DashboardMockup'
 import type { OpenAuthFn } from '../../types'
 
@@ -16,6 +17,7 @@ export function HeroSection({ onOpenAuth }: HeroSectionProps) {
       <AmbientBackground />
       <TechGrid />
       <FloatingParticles />
+      <FloatingScissors />
 
       <div className="max-w-7xl mx-auto w-full relative z-10">
         <div className="grid md:grid-cols-[1fr,1.35fr] gap-10 items-center">

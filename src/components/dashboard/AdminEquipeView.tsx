@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Plus, X, TrendingUp, Clock, Scissors, Copy, CheckCheck } from 'lucide-react'
+import { Users, Plus, X, TrendingUp, Clock, Scissors, Copy, CheckCheck, Crown } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
 import { Avatar } from '../ui/Avatar'
@@ -20,6 +20,7 @@ type TeamMember = {
   appointmentsToday: number
   revenueToday:      number
   phone:             string
+  isOwner:           boolean
 }
 
 export function AdminEquipeView({ user }: AdminEquipeViewProps) {
@@ -41,11 +42,12 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
         // vazar o código de outras barbearias na vitrine pública.
         supabase.rpc('my_invite_code'),
 
-        // Barbeiros desta barbearia
+        // Barbeiros desta barbearia + o próprio dono (ele também atende,
+        // então os números dele entram na mesma régua da equipe)
         supabase.from('profiles')
-          .select('id, name, specialty, avatar, avatar_url, phone, active')
+          .select('id, name, specialty, avatar, avatar_url, phone, active, role')
           .eq('barbershop_id', user.barbershopId!)
-          .eq('role', 'barber'),
+          .in('role', ['barber', 'admin']),
 
         // Agendamentos de hoje para calcular stats
         supabase.from('bookings')
@@ -64,7 +66,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
         return {
           id:                m.id,
           name:              m.name,
-          specialty:         m.specialty  ?? 'Barbeiro',
+          specialty:         m.specialty  ?? (m.role === 'admin' ? 'CEO & Barbeiro' : 'Barbeiro'),
           rating:            4.9,
           avatar:            m.avatar || m.name,
           avatarUrl:         m.avatar_url ?? null,
@@ -74,8 +76,10 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
           revenueToday:      myBookings
             .filter(b => b.status === 'done')
             .reduce((s, b) => s + Number(b.service_price), 0),
+          isOwner:           m.role === 'admin',
         }
       })
+      mapped.sort((a, b) => Number(b.isOwner) - Number(a.isOwner))
 
       setTeam(mapped)
       setLoading(false)
@@ -115,7 +119,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
             Equipe
           </h1>
           <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
-            {active.length} barbeiro{active.length !== 1 ? 's' : ''} ativo{active.length !== 1 ? 's' : ''}
+            {active.length} profissiona{active.length !== 1 ? 'is' : 'l'} ativo{active.length !== 1 ? 's' : ''} — incluindo você
           </p>
         </div>
         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -208,14 +212,31 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ delay: i * 0.08 }}
                   className="rounded-2xl p-5"
-                  style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', transition: 'border-color 0.2s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(212,175,55,0.2)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.06)' }}>
+                  style={{
+                    background: m.isOwner ? 'rgba(212,175,55,0.04)' : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${m.isOwner ? 'rgba(212,175,55,0.32)' : 'rgba(255,255,255,0.06)'}`,
+                    boxShadow: m.isOwner ? '0 0 30px rgba(212,175,55,0.07)' : 'none',
+                    transition: 'border-color 0.2s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = m.isOwner ? 'rgba(212,175,55,0.5)' : 'rgba(212,175,55,0.2)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = m.isOwner ? 'rgba(212,175,55,0.32)' : 'rgba(255,255,255,0.06)' }}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <Avatar url={m.avatarUrl} fallback={m.avatar} size={44} rounded="xl" highlight />
                       <div>
-                        <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>{m.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>{m.name}</span>
+                          {m.isOwner && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full flex-shrink-0"
+                              style={{
+                                fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em',
+                                background: 'linear-gradient(135deg, rgba(212,175,55,0.18), rgba(212,175,55,0.08))',
+                                border: '1px solid rgba(212,175,55,0.4)', color: '#D4AF37',
+                              }}>
+                              <Crown size={8} /> CEO
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.68)', marginTop: '2px' }}>
                           <Scissors size={9} style={{ display: 'inline', marginRight: '4px' }} />{m.specialty}
                         </div>

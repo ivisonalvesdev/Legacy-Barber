@@ -28,10 +28,13 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
     onUpdate({ ...user, avatarUrl: url ?? undefined })
   }
 
+  // Admin também edita especialidade: o dono pode atender como barbeiro
+  const hasSpecialty = user.role === 'barber' || user.role === 'admin'
+
   const dirty =
     name.trim() !== user.name ||
     phone.trim() !== user.phone ||
-    (user.role === 'barber' && specialty.trim() !== (user.specialty ?? ''))
+    (hasSpecialty && specialty.trim() !== (user.specialty ?? ''))
 
   const save = async () => {
     if (!name.trim()) { setError('O nome não pode ficar vazio.'); return }
@@ -44,7 +47,7 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
       phone:  phone.trim(),
       avatar: initials,
     }
-    if (user.role === 'barber') updates.specialty = specialty.trim()
+    if (hasSpecialty) updates.specialty = specialty.trim()
 
     const { error: err } = await supabase.from('profiles').update(updates).eq('id', user.id)
     setSaving(false)
@@ -55,7 +58,7 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
       name:      name.trim(),
       phone:     phone.trim(),
       avatar:    initials,
-      specialty: user.role === 'barber' ? specialty.trim() || undefined : user.specialty,
+      specialty: hasSpecialty ? specialty.trim() || undefined : user.specialty,
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
@@ -140,13 +143,13 @@ export function ProfileView({ user, onUpdate }: ProfileViewProps) {
             style={inputStyle} />
         </div>
 
-        {user.role === 'barber' && (
+        {hasSpecialty && (
           <div>
             <label className="flex items-center gap-1.5" style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               <Scissors size={11} /> Especialidade
             </label>
             <input value={specialty} onChange={e => setSpecialty(e.target.value)}
-              placeholder="Ex: Degradê, Barba Artística"
+              placeholder={user.role === 'admin' ? 'Ex: Clássico & Navalha (você também atende)' : 'Ex: Degradê, Barba Artística'}
               className="w-full mt-1.5 px-3 py-2.5 rounded-xl outline-none text-sm"
               style={inputStyle} />
           </div>

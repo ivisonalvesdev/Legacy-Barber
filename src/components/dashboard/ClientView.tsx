@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Clock, Star, Check, ChevronLeft, ChevronRight, CheckCircle, BadgeCheck, Scissors, Search, MapPin, Store } from 'lucide-react'
+import { Clock, Star, Check, ChevronLeft, ChevronRight, CheckCircle, BadgeCheck, Scissors, Search, MapPin, Store, Crown } from 'lucide-react'
 import type { AppUser, Service, Barbershop } from '../../types'
 import { formatAddress } from '../../types'
 import { TIME_SLOTS } from '../../data/defaults'
 import { supabase } from '../../lib/supabase'
+import { fireEvent } from '../../lib/integrations'
 import { Avatar } from '../ui/Avatar'
 
 interface ClientViewProps {
@@ -20,6 +21,7 @@ type Barber = {
   available:    boolean
   rating:       number
   barbershopId: string | null
+  isOwner:      boolean
 }
 
 // Mesma normalização de public.normalize_search() no banco: sem isso "José"
@@ -203,27 +205,32 @@ export function ClientView({ user }: ClientViewProps) {
   }, [shopQuery])
 
   // ── Barbeiros da barbearia escolhida ─────────────────────────
+  // O dono (admin) também entra na lista: muitas vezes ele é um dos
+  // barbeiros — aparece primeiro, com o selo de dono.
   useEffect(() => {
     if (!selShop) { setBarbers([]); return }
     setBarbLoad(true)
     supabase.from('profiles')
-      .select('id,name,specialty,avatar,avatar_url,barbershop_id,active')
-      .eq('role', 'barber')
+      .select('id,name,specialty,avatar,avatar_url,barbershop_id,active,role')
+      .in('role', ['barber', 'admin'])
       .eq('barbershop_id', selShop.id)
       .eq('active', true)
       .order('name')
       .then(({ data }) => {
         setBarbLoad(false)
-        setBarbers((data ?? []).map(b => ({
+        const list: Barber[] = (data ?? []).map(b => ({
           id:           b.id,
           name:         b.name,
-          specialty:    b.specialty ?? 'Barbeiro',
+          specialty:    b.specialty ?? (b.role === 'admin' ? 'CEO & Barbeiro' : 'Barbeiro'),
           avatar:       b.avatar || b.name,
           avatarUrl:    b.avatar_url ?? null,
           available:    b.active ?? true,
           rating:       4.9,
           barbershopId: b.barbershop_id ?? null,
-        })))
+          isOwner:      b.role === 'admin',
+        }))
+        list.sort((a, b) => Number(b.isOwner) - Number(a.isOwner))
+        setBarbers(list)
       })
   }, [selShop])
 
@@ -305,6 +312,17 @@ export function ClientView({ user }: ClientViewProps) {
       }
     } else {
       setConfirmed(true)
+      // Automação (n8n): base para confirmação/lembrete via WhatsApp.
+      // Não bloqueia — o agendamento já está salvo.
+      fireEvent('booking.created', {
+        source:        'client',
+        barbershop:    { id: selShop.id, name: selShop.name, phone: selShop.phone ?? null },
+        client:        { id: user.id, name: user.name, phone: user.phone },
+        barber:        { id: selBarber.id, name: selBarber.name },
+        service:       { name: selService.name, price: selService.price },
+        date:          selDate,
+        time:          selTime,
+      })
     }
   }
 
@@ -514,7 +532,19 @@ export function ClientView({ user }: ClientViewProps) {
                       {b.available && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500" style={{ border: '2px solid #050505' }} />}
                     </div>
                     <div className="flex-1 text-left">
-                      <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>{b.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>{b.name}</span>
+                        {b.isOwner && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full flex-shrink-0"
+                            style={{
+                              fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em',
+                              background: 'linear-gradient(135deg, rgba(212,175,55,0.18), rgba(212,175,55,0.08))',
+                              border: '1px solid rgba(212,175,55,0.4)', color: '#D4AF37',
+                            }}>
+                            <Crown size={8} /> CEO
+                          </span>
+                        )}
+                      </div>
                       <div style={{ color: 'rgba(113,113,122,0.77)', fontSize: '12px', marginTop: '2px' }}>{b.specialty}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">

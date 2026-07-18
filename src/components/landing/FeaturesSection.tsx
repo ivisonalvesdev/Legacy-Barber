@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion'
 import { Shield } from 'lucide-react'
 import { LANDING_FEATURES } from '../../data/landing'
+import { FloatingScissors } from '../ui/FloatingScissors'
 
 export function FeaturesSection() {
   return (
     <section id="features" className="relative z-[1] py-24 px-4 md:px-8">
+      <FloatingScissors variant="features" />
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}

@@ -105,11 +105,11 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
           .gte('date', prev7Start)
           .lte('date', prev7End),
 
-        // Barbeiros ativos — capacidade do dia para a taxa de ocupação
+        // Barbeiros ativos (o dono também atende) — capacidade do dia
         supabase.from('profiles')
           .select('id', { count: 'exact', head: true })
           .eq('barbershop_id', bsId)
-          .eq('role', 'barber')
+          .in('role', ['barber', 'admin'])
           .eq('active', true),
       ])
 

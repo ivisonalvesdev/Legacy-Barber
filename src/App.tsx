@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Scissors, Menu, X } from 'lucide-react'
 
@@ -6,6 +6,7 @@ import type { AppUser, OpenAuthFn, UserRole } from './types'
 import { supabase } from './lib/supabase'
 
 import { AmbientBackground }      from './components/ui/AmbientBackground'
+import { ScissorsBackdrop }       from './components/ui/ScissorsBackdrop'
 import { Preloader }              from './components/ui/Preloader'
 import { Avatar }                 from './components/ui/Avatar'
 import { LandingPage }            from './components/landing/LandingPage'
@@ -32,6 +33,9 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [splashDone, setSplashDone] = useState(false)
+  // Evita buscar o perfil duas vezes quando INITIAL_SESSION e SIGNED_IN
+  // chegam em sequência (ex.: link de confirmação de e-mail)
+  const hasUserRef = useRef(false)
 
   // Garante que o splash (contagem 0→100%) apareça por completo
   useEffect(() => {
@@ -58,6 +62,7 @@ export default function App() {
             barbershopName = shop?.name
           }
 
+          hasUserRef.current = true
           setUser({
             id:             data.id,
             name:           data.name,
@@ -84,13 +89,17 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       clearTimeout(fallback)
-      if (event === 'INITIAL_SESSION') {
-        if (session?.user) {
+      // SIGNED_IN também entra: é o evento disparado quando o usuário chega
+      // pelo link de confirmação de e-mail (detectSessionInUrl) — sem ele,
+      // quem confirma o cadastro cairia na landing deslogado.
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (session?.user && !hasUserRef.current) {
           await fetchProfile(session.user.id, session.user.email!)
-        } else {
+        } else if (event === 'INITIAL_SESSION') {
           setAuthLoading(false)
         }
       } else if (event === 'SIGNED_OUT') {
+        hasUserRef.current = false
         setUser(null)
         setAuthLoading(false)
       }
@@ -103,6 +112,7 @@ export default function App() {
   const closeAuth = () => setShowAuth(false)
 
   const login = (u: AppUser) => {
+    hasUserRef.current = true
     setUser(u)
     setShowAuth(false)
     setTab(u.role === 'admin' ? 'dashboard' : 'agenda')
@@ -110,6 +120,7 @@ export default function App() {
 
   const logout = async () => {
     await supabase.auth.signOut()
+    hasUserRef.current = false
     setUser(null)
     setMobile(false)
   }
@@ -154,6 +165,7 @@ export default function App() {
     <div className="min-h-screen text-white relative"
       style={{ fontFamily: "'DM Sans', sans-serif", background: '#050505' }}>
       <AmbientBackground />
+      <ScissorsBackdrop />
 
       {/* Mobile header */}
       <header className="md:hidden relative z-50 flex items-center justify-between px-4 py-3"

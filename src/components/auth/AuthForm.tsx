@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scissors, User, LogIn, UserPlus, Eye, EyeOff,
-  Phone, Lock, Mail, Building2, Crown, Sparkles, Hash,
+  Phone, Lock, Mail, Building2, Crown, Sparkles, Hash, Check,
 } from 'lucide-react'
 import type { AppUser, UserRole } from '../../types'
 import { AuthInput } from '../ui/AuthInput'
@@ -13,14 +13,19 @@ interface AuthFormProps {
   initialMode?: 'login' | 'register'
 }
 
+// E-mail do último login fica salvo no aparelho (se o usuário quiser):
+// na próxima visita o campo já vem preenchido.
+const REMEMBER_KEY = 'legacy:remember-email'
+
 export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
   const [mode, setMode]         = useState<'login' | 'register'>(initialMode)
   const [role, setRole]         = useState<UserRole>('client')
   const [showPass, setShowPass] = useState(false)
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
+  const [remember, setRemember] = useState(() => !!localStorage.getItem(REMEMBER_KEY))
   const [form, setForm]         = useState({
-    name: '', email: '', phone: '', password: '',
+    name: '', email: localStorage.getItem(REMEMBER_KEY) ?? '', phone: '', password: '',
     specialty: '', barbershopName: '', inviteCode: '',
   })
 
@@ -56,6 +61,9 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
           .single()
 
         if (profileErr || !profile) throw new Error('Perfil não encontrado. Tente novamente.')
+
+        if (remember) localStorage.setItem(REMEMBER_KEY, form.email)
+        else localStorage.removeItem(REMEMBER_KEY)
 
         // Busca nome da barbearia separado (mais robusto que join FK)
         let barbershopName: string | undefined
@@ -330,6 +338,21 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
               </button>
             }
           />
+
+          {mode === 'login' && (
+            <button type="button" onClick={() => setRemember(r => !r)}
+              className="flex items-center gap-2 select-none"
+              style={{ fontSize: '12px', color: remember ? 'rgba(212,175,55,0.9)' : 'rgba(113,113,122,0.82)' }}>
+              <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: remember ? 'rgba(212,175,55,0.16)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${remember ? 'rgba(212,175,55,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                }}>
+                {remember && <Check size={11} style={{ color: '#D4AF37' }} />}
+              </span>
+              Lembrar meu e-mail neste aparelho
+            </button>
+          )}
 
           <AnimatePresence>
             {error && (

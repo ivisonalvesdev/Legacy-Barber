@@ -269,7 +269,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
         supabase.from('profiles')
           .select('id, name, avatar, avatar_url')
           .eq('barbershop_id', shopId)
-          .eq('role', 'barber'),
+          .in('role', ['barber', 'admin']),
         supabase.from('products')
           .select('stock, cost')
           .eq('barbershop_id', shopId),
