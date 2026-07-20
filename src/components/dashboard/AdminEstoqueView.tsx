@@ -57,25 +57,30 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
 
   const load = useCallback(async () => {
     if (!user.barbershopId) { setLoading(false); return }
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, category, stock, max_stock, unit, cost')
-      .eq('barbershop_id', user.barbershopId)
-      .order('name')
-    if (error) {
-      setErrMsg('Não foi possível carregar o estoque. Execute supabase/setup_final.sql no Supabase.')
-    } else {
-      setInv((data ?? []).map(p => ({
-        id:       p.id,
-        name:     p.name,
-        category: p.category,
-        stock:    p.stock,
-        maxStock: p.max_stock,
-        unit:     p.unit,
-        cost:     Number(p.cost),
-      })))
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, category, stock, max_stock, unit, cost')
+        .eq('barbershop_id', user.barbershopId)
+        .order('name')
+      if (error) {
+        setErrMsg('Não foi possível carregar o estoque. Execute supabase/setup_final.sql no Supabase.')
+      } else {
+        setInv((data ?? []).map(p => ({
+          id:       p.id,
+          name:     p.name,
+          category: p.category,
+          stock:    p.stock,
+          maxStock: p.max_stock,
+          unit:     p.unit,
+          cost:     Number(p.cost),
+        })))
+      }
+    } catch {
+      setErrMsg('Não foi possível carregar o estoque. Verifique sua conexão.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [user.barbershopId])
 
   useEffect(() => { load() }, [load])

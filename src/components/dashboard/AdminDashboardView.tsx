@@ -50,6 +50,7 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
 
   const load = useCallback(async () => {
       if (!user.barbershopId) { setLoading(false); return }
+      try {
 
       const bsId       = user.barbershopId
       const now        = new Date()
@@ -176,7 +177,9 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
         setWeekDelta(Math.round(((thisWeekTotal - prevWeekTotal) / prevWeekTotal) * 100))
       }
 
-      setLoading(false)
+      } finally {
+        setLoading(false)
+      }
   }, [todayISO, user.barbershopId])
 
   useEffect(() => { load() }, [load])

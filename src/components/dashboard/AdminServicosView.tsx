@@ -36,20 +36,25 @@ export function AdminServicosView({ user }: AdminServicosViewProps) {
 
   const load = useCallback(async () => {
     if (!user.barbershopId) { setLoading(false); return }
-    const { data, error } = await supabase
-      .from('services')
-      .select('id, name, duration_min, price, emoji, popular, active')
-      .eq('barbershop_id', user.barbershopId)
-      .order('price')
-    if (error) {
-      setErrMsg('Não foi possível carregar os serviços.')
-    } else {
-      setItems((data ?? []).map(s => ({
-        id: s.id, name: s.name, durationMin: s.duration_min,
-        price: Number(s.price), emoji: s.emoji, popular: s.popular, active: s.active,
-      })))
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, duration_min, price, emoji, popular, active')
+        .eq('barbershop_id', user.barbershopId)
+        .order('price')
+      if (error) {
+        setErrMsg('Não foi possível carregar os serviços.')
+      } else {
+        setItems((data ?? []).map(s => ({
+          id: s.id, name: s.name, durationMin: s.duration_min,
+          price: Number(s.price), emoji: s.emoji, popular: s.popular, active: s.active,
+        })))
+      }
+    } catch {
+      setErrMsg('Não foi possível carregar os serviços. Verifique sua conexão.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [user.barbershopId])
 
   useEffect(() => { load() }, [load])

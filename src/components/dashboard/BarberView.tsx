@@ -56,7 +56,7 @@ export function BarberView({ user }: BarberViewProps) {
             .filter(a => a.status === 'done')
             .reduce((s, a) => s + a.price, 0),
         })
-      })
+      }, () => {})
   }, [user.id])
 
   const markDone = async (item: AgendaItem) => {

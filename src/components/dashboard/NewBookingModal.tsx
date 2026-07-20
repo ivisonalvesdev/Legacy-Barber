@@ -43,7 +43,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
           .map(b => ({ id: b.id, name: b.role === 'admin' ? `${b.name} · CEO` : b.name }))
         setBarbers(opts)
         if (opts.length > 0 && !barberId) setBarberId(opts[0].id)
-      })
+      }, () => setBarbers([]))
     supabase.from('services')
       .select('id, name, duration_min, price, emoji, popular')
       .eq('barbershop_id', user.barbershopId)
@@ -59,7 +59,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
             }))
         setServices(list)
         if (list.length > 0) setServiceId(prev => prev || list[0].id)
-      })
+      }, () => setServices(DEFAULT_SERVICES))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user.barbershopId])
 
@@ -71,7 +71,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
       .eq('barber_id', barberId)
       .eq('date', date)
       .neq('status', 'cancelled')
-      .then(({ data }) => setTaken(new Set((data ?? []).map(b => b.time))))
+      .then(({ data }) => setTaken(new Set((data ?? []).map(b => b.time))), () => setTaken(new Set()))
   }, [open, barberId, date])
 
   const save = async () => {

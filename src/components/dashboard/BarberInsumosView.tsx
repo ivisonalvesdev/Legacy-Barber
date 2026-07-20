@@ -35,6 +35,9 @@ export function BarberInsumosView({ user }: BarberInsumosViewProps) {
           })))
         }
         setLoading(false)
+      }, () => {
+        setErrMsg('Não foi possível carregar os insumos. Verifique sua conexão.')
+        setLoading(false)
       })
   }, [user.barbershopId])
 

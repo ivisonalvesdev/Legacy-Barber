@@ -17,15 +17,27 @@ interface AuthFormProps {
 // na próxima visita o campo já vem preenchido.
 const REMEMBER_KEY = 'legacy:remember-email'
 
+// localStorage pode lançar (Safari em modo privado, storage bloqueado por
+// política do navegador/WebView) — nunca deixamos isso quebrar o render.
+const safeGetItem = (key: string): string | null => {
+  try { return localStorage.getItem(key) } catch { return null }
+}
+const safeSetItem = (key: string, value: string) => {
+  try { localStorage.setItem(key, value) } catch { /* storage indisponível */ }
+}
+const safeRemoveItem = (key: string) => {
+  try { localStorage.removeItem(key) } catch { /* storage indisponível */ }
+}
+
 export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
   const [mode, setMode]         = useState<'login' | 'register'>(initialMode)
   const [role, setRole]         = useState<UserRole>('client')
   const [showPass, setShowPass] = useState(false)
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
-  const [remember, setRemember] = useState(() => !!localStorage.getItem(REMEMBER_KEY))
+  const [remember, setRemember] = useState(() => !!safeGetItem(REMEMBER_KEY))
   const [form, setForm]         = useState({
-    name: '', email: localStorage.getItem(REMEMBER_KEY) ?? '', phone: '', password: '',
+    name: '', email: safeGetItem(REMEMBER_KEY) ?? '', phone: '', password: '',
     specialty: '', barbershopName: '', inviteCode: '',
   })
 
@@ -62,8 +74,8 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
 
         if (profileErr || !profile) throw new Error('Perfil não encontrado. Tente novamente.')
 
-        if (remember) localStorage.setItem(REMEMBER_KEY, form.email)
-        else localStorage.removeItem(REMEMBER_KEY)
+        if (remember) safeSetItem(REMEMBER_KEY, form.email)
+        else safeRemoveItem(REMEMBER_KEY)
 
         // Busca nome da barbearia separado (mais robusto que join FK)
         let barbershopName: string | undefined

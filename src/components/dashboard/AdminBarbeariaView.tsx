@@ -60,32 +60,37 @@ export function AdminBarbeariaView({ user, onUpdate }: AdminBarbeariaViewProps) 
 
   const load = useCallback(async () => {
     if (!user.barbershopId) { setLoading(false); return }
-    const { data, error: err } = await supabase
-      .from('barbershops')
-      .select('id,name,description,phone,cnpj,legal_name,logo_url,published,address_street,address_number,address_district,address_city,address_state,address_zip')
-      .eq('id', user.barbershopId)
-      .single()
+    try {
+      const { data, error: err } = await supabase
+        .from('barbershops')
+        .select('id,name,description,phone,cnpj,legal_name,logo_url,published,address_street,address_number,address_district,address_city,address_state,address_zip')
+        .eq('id', user.barbershopId)
+        .single()
 
-    if (err || !data) { setError('Não foi possível carregar a barbearia.'); setLoading(false); return }
+      if (err || !data) { setError('Não foi possível carregar a barbearia.'); return }
 
-    const f: Form = {
-      name:        data.name              ?? '',
-      description: data.description       ?? '',
-      phone:       data.phone             ?? '',
-      cnpj:        data.cnpj              ?? '',
-      legalName:   data.legal_name        ?? '',
-      street:      data.address_street    ?? '',
-      number:      data.address_number    ?? '',
-      district:    data.address_district  ?? '',
-      city:        data.address_city      ?? '',
-      state:       data.address_state     ?? '',
-      zip:         data.address_zip       ?? '',
+      const f: Form = {
+        name:        data.name              ?? '',
+        description: data.description       ?? '',
+        phone:       data.phone             ?? '',
+        cnpj:        data.cnpj              ?? '',
+        legalName:   data.legal_name        ?? '',
+        street:      data.address_street    ?? '',
+        number:      data.address_number    ?? '',
+        district:    data.address_district  ?? '',
+        city:        data.address_city      ?? '',
+        state:       data.address_state     ?? '',
+        zip:         data.address_zip       ?? '',
+      }
+      setForm(f); setInitial(f)
+      setLogoUrl(data.logo_url ?? null)
+      setPub(data.published ?? false)
+      setShopId(data.id)
+    } catch {
+      setError('Não foi possível carregar a barbearia. Verifique sua conexão.')
+    } finally {
+      setLoading(false)
     }
-    setForm(f); setInitial(f)
-    setLogoUrl(data.logo_url ?? null)
-    setPub(data.published ?? false)
-    setShopId(data.id)
-    setLoading(false)
   }, [user.barbershopId])
 
   useEffect(() => { load() }, [load])

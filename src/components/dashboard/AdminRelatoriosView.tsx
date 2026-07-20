@@ -246,6 +246,7 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
     const shopId = user.barbershopId
 
     const load = async () => {
+      try {
       // Janela única de 6 meses — tudo é agregado aqui no cliente
       const start6m    = new Date(now.getFullYear(), now.getMonth() - 5, 1)
       const start6mISO = iso(start6m)
@@ -416,7 +417,9 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
           }))
       )
 
-      setLoading(false)
+      } finally {
+        setLoading(false)
+      }
     }
 
     load()

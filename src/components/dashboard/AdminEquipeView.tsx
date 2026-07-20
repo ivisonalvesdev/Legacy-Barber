@@ -37,52 +37,57 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
     if (!user.barbershopId) { setLoading(false); return }
 
     const load = async () => {
-      const [shopRes, membersRes, bookingsRes] = await Promise.all([
-        // Código de convite — via RPC: a coluna é revogada na tabela para não
-        // vazar o código de outras barbearias na vitrine pública.
-        supabase.rpc('my_invite_code'),
+      try {
+        const [shopRes, membersRes, bookingsRes] = await Promise.all([
+          // Código de convite — via RPC: a coluna é revogada na tabela para não
+          // vazar o código de outras barbearias na vitrine pública.
+          supabase.rpc('my_invite_code'),
 
-        // Barbeiros desta barbearia + o próprio dono (ele também atende,
-        // então os números dele entram na mesma régua da equipe)
-        supabase.from('profiles')
-          .select('id, name, specialty, avatar, avatar_url, phone, active, role')
-          .eq('barbershop_id', user.barbershopId!)
-          .in('role', ['barber', 'admin']),
+          // Barbeiros desta barbearia + o próprio dono (ele também atende,
+          // então os números dele entram na mesma régua da equipe)
+          supabase.from('profiles')
+            .select('id, name, specialty, avatar, avatar_url, phone, active, role')
+            .eq('barbershop_id', user.barbershopId!)
+            .in('role', ['barber', 'admin']),
 
-        // Agendamentos de hoje para calcular stats
-        supabase.from('bookings')
-          .select('barber_id, service_price, status')
-          .eq('barbershop_id', user.barbershopId!)
-          .eq('date', todayISO),
-      ])
+          // Agendamentos de hoje para calcular stats
+          supabase.from('bookings')
+            .select('barber_id, service_price, status')
+            .eq('barbershop_id', user.barbershopId!)
+            .eq('date', todayISO),
+        ])
 
-      if (shopRes.data) setCode(shopRes.data as string)
+        if (shopRes.data) setCode(shopRes.data as string)
 
-      const members = membersRes.data ?? []
-      const bookings = bookingsRes.data ?? []
+        const members = membersRes.data ?? []
+        const bookings = bookingsRes.data ?? []
 
-      const mapped: TeamMember[] = members.map(m => {
-        const myBookings = bookings.filter(b => b.barber_id === m.id)
-        return {
-          id:                m.id,
-          name:              m.name,
-          specialty:         m.specialty  ?? (m.role === 'admin' ? 'CEO & Barbeiro' : 'Barbeiro'),
-          rating:            4.9,
-          avatar:            m.avatar || m.name,
-          avatarUrl:         m.avatar_url ?? null,
-          active:            m.active     ?? true,
-          phone:             m.phone      ?? '',
-          appointmentsToday: myBookings.length,
-          revenueToday:      myBookings
-            .filter(b => b.status === 'done')
-            .reduce((s, b) => s + Number(b.service_price), 0),
-          isOwner:           m.role === 'admin',
-        }
-      })
-      mapped.sort((a, b) => Number(b.isOwner) - Number(a.isOwner))
+        const mapped: TeamMember[] = members.map(m => {
+          const myBookings = bookings.filter(b => b.barber_id === m.id)
+          return {
+            id:                m.id,
+            name:              m.name,
+            specialty:         m.specialty  ?? (m.role === 'admin' ? 'CEO & Barbeiro' : 'Barbeiro'),
+            rating:            4.9,
+            avatar:            m.avatar || m.name,
+            avatarUrl:         m.avatar_url ?? null,
+            active:            m.active     ?? true,
+            phone:             m.phone      ?? '',
+            appointmentsToday: myBookings.length,
+            revenueToday:      myBookings
+              .filter(b => b.status === 'done')
+              .reduce((s, b) => s + Number(b.service_price), 0),
+            isOwner:           m.role === 'admin',
+          }
+        })
+        mapped.sort((a, b) => Number(b.isOwner) - Number(a.isOwner))
 
-      setTeam(mapped)
-      setLoading(false)
+        setTeam(mapped)
+      } catch {
+        // silencioso: a lista fica vazia, o usuário pode tentar de novo
+      } finally {
+        setLoading(false)
+      }
     }
 
     load()

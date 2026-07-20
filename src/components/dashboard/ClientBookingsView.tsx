@@ -57,7 +57,7 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
           status:  b.status as BookingStatus,
         })))
         setLoading(false)
-      })
+      }, () => { setBookings([]); setLoading(false) })
   }, [user.id])
 
   const cancel = async (id: string) => {

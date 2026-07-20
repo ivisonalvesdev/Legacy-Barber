@@ -195,10 +195,15 @@ export function ClientView({ user }: ClientViewProps) {
       const term = normalize(shopQuery)
       if (term) q = q.ilike('search_text', `%${term}%`)
 
-      const { data } = await q.order('name').limit(50)
-      if (cancelled) return
-      setShops(((data ?? []) as ShopRow[]).map(toShop))
-      setShopLoad(false)
+      try {
+        const { data } = await q.order('name').limit(50)
+        if (cancelled) return
+        setShops(((data ?? []) as ShopRow[]).map(toShop))
+      } catch {
+        if (!cancelled) setShops([])
+      } finally {
+        if (!cancelled) setShopLoad(false)
+      }
     }, shopQuery ? 280 : 0)
 
     return () => { cancelled = true; clearTimeout(timer) }
@@ -217,7 +222,6 @@ export function ClientView({ user }: ClientViewProps) {
       .eq('active', true)
       .order('name')
       .then(({ data }) => {
-        setBarbLoad(false)
         const list: Barber[] = (data ?? []).map(b => ({
           id:           b.id,
           name:         b.name,
@@ -231,7 +235,8 @@ export function ClientView({ user }: ClientViewProps) {
         }))
         list.sort((a, b) => Number(b.isOwner) - Number(a.isOwner))
         setBarbers(list)
-      })
+        setBarbLoad(false)
+      }, () => { setBarbers([]); setBarbLoad(false) })
   }, [selShop])
 
   // ── Catálogo de serviços da barbearia escolhida ──────────────
@@ -245,7 +250,6 @@ export function ClientView({ user }: ClientViewProps) {
       .eq('active', true)
       .order('price')
       .then(({ data }) => {
-        setSvcLoading(false)
         // Sem fallback local: o banco valida nome+preço contra o catálogo real,
         // então oferecer serviço inexistente só produziria erro na confirmação.
         setServices((data ?? []).map(s => ({
@@ -257,7 +261,8 @@ export function ClientView({ user }: ClientViewProps) {
           popular:     s.popular,
           active:      true, // a query acima já filtra .eq('active', true)
         })))
-      })
+        setSvcLoading(false)
+      }, () => { setServices([]); setSvcLoading(false) })
   }, [selShop])
 
   // ── Horários já ocupados do barbeiro na data escolhida ───────
@@ -270,7 +275,7 @@ export function ClientView({ user }: ClientViewProps) {
       .neq('status', 'cancelled')
       .then(({ data }) => {
         setTaken(new Set((data ?? []).map(b => b.time)))
-      })
+      }, () => setTaken(new Set()))
   }, [selBarber, selDate])
 
   // Horários no passado (quando a data é hoje) também ficam bloqueados
