@@ -96,7 +96,14 @@ Deno.serve(async (req) => {
     const result = await res.json()
     if (!res.ok) return json({ error: 'Falha no OneSignal', detail: result }, 502)
 
-    return json({ ok: true, recipients: targets.length, onesignal: result.id ?? null })
+    // result.errors (ex.: "All included players are not subscribed") indica que
+    // o destinatário ainda não tem push ativo — não é falha da função.
+    return json({
+      ok: true,
+      recipients: targets.length,
+      onesignal_id: result.id ?? null,
+      onesignal_errors: result.errors ?? null,
+    })
   } catch (err) {
     return json({ error: String(err) }, 500)
   }

@@ -284,6 +284,10 @@ async function main() {
 
   // ── 6. Agendamentos ───────────────────────────────────────────
   await admin.from('bookings').delete().eq('barbershop_id', shopId)
+  // Limpa bookings órfãos (barbershop_id nulo) de execuções antigas: o índice
+  // único bookings_slot_unique é (barber_id, date, time) SEM barbershop_id,
+  // então um órfão do mesmo barbeiro colidiria com os novos slots.
+  await admin.from('bookings').delete().is('barbershop_id', null)
 
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const start = new Date(today); start.setMonth(start.getMonth() - MONTHS_BACK)
