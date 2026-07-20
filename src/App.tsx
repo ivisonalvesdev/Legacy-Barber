@@ -175,25 +175,19 @@ export default function App() {
       })
     }
 
-    // IMPORTANTE: setar o token ANTES de subscrever — a RLS "staff see shop
-    // bookings" precisa do usuário autenticado, e o canal conecta na hora do
-    // .subscribe(). Por isso pegamos a sessão primeiro, depois abrimos o canal.
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return
-      const token = data.session?.access_token
-      if (token) supabase.realtime.setAuth(token)
-
-      channel = supabase
-        .channel(`bookings-toast-${barbershopId}`)
-        .on('postgres_changes', {
-          event: 'INSERT', schema: 'public', table: 'bookings',
-          filter: `barbershop_id=eq.${barbershopId}`,
-        }, payload => { void handleInsert(payload.new as Parameters<typeof handleInsert>[0]) })
-        .subscribe(status => {
-          if (status === 'SUBSCRIBED') console.info('[toast] Realtime conectado ✅')
-          else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[toast] Realtime falhou:', status)
-        })
-    })
+    // O supabase-js já propaga o token de auth para o Realtime internamente
+    // (via onAuthStateChange). Abrimos o canal direto; a RLS "staff see shop
+    // bookings" libera os eventos para o barbeiro/dono autenticado.
+    channel = supabase
+      .channel(`bookings-toast-${barbershopId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'bookings',
+        filter: `barbershop_id=eq.${barbershopId}`,
+      }, payload => { void handleInsert(payload.new as Parameters<typeof handleInsert>[0]) })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') console.info('[toast] Realtime conectado ✅')
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[toast] Realtime falhou:', status)
+      })
 
     return () => { cancelled = true; if (channel) supabase.removeChannel(channel) }
   }, [userId, userRole, barbershopId, pushToast])

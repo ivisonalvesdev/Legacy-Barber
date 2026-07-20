@@ -18,12 +18,12 @@ function makeCrossings(count: number): Cross[] {
   const rand = (a: number, b: number) => a + Math.random() * (b - a)
   return Array.from({ length: count }, (_, i) => ({
     top:   `${rand(3, 94).toFixed(1)}%`,
-    size:  Math.round(rand(13, 24)),
+    size:  Math.round(rand(16, 30)),     // maiores, mais presentes
     dur:   rand(15, 24),
     delay: rand(0, 16),
     dir:   (i % 2 === 0 ? 1 : -1) as 1 | -1,
     snip:  rand(0.5, 0.9),               // corte rápido
-    op:    rand(0.08, 0.16),             // bem sutil no fundo do dashboard
+    op:    rand(0.22, 0.4),              // mais vívidas (antes 0.08–0.16)
   }))
 }
 
@@ -43,7 +43,7 @@ function Crossing({ c }: { c: Cross }) {
         left: 0,
         opacity: c.op,
         scaleX: flip,
-        filter: 'drop-shadow(0 0 5px rgba(212,175,55,0.22))',
+        filter: 'drop-shadow(0 0 10px rgba(212,175,55,0.5))',   // brilho dourado mais forte
         willChange: 'transform',
       }}>
       <SnipScissors size={c.size} speed={c.snip} delay={c.delay} />
@@ -59,7 +59,7 @@ function Crossing({ c }: { c: Cross }) {
 export function ScissorsBackdrop() {
   const reduced = useReducedMotion()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const crossings = useMemo(() => makeCrossings(8), [])
+  const crossings = useMemo(() => makeCrossings(11), [])
 
   if (reduced) return null
 

@@ -19,12 +19,12 @@ function makeCrossings(count: number): Cross[] {
   const rand = (a: number, b: number) => a + Math.random() * (b - a)
   return Array.from({ length: count }, (_, i) => ({
     top:   `${rand(4, 92).toFixed(1)}%`,
-    size:  Math.round(rand(15, 30)),
+    size:  Math.round(rand(17, 34)),     // maiores
     dur:   rand(13, 22),                 // travessia suave, nem lenta nem rápida
     delay: rand(0, 14),                  // espalha o início ao longo do tempo
     dir:   (i % 2 === 0 ? 1 : -1) as 1 | -1,
     snip:  rand(0.5, 0.9),               // CORTE RÁPIDO
-    op:    rand(0.16, 0.3),
+    op:    rand(0.28, 0.5),              // mais vívidas (antes 0.16–0.3)
   }))
 }
 
@@ -48,7 +48,7 @@ function Crossing({ c }: { c: Cross }) {
         left: 0,
         opacity: c.op,
         scaleX: flip,
-        filter: 'drop-shadow(0 0 6px rgba(212,175,55,0.4))',
+        filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.6))',   // brilho dourado mais forte
         willChange: 'transform',
       }}>
       <SnipScissors size={c.size} speed={c.snip} delay={c.delay} />

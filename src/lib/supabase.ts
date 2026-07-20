@@ -27,3 +27,11 @@ export const supabase = createClient(url, key, {
     lock:               noOpLock,
   },
 })
+
+// Mantém o WebSocket do Realtime autenticado com o JWT do usuário. Sem isto o
+// socket abre só com a anon key e a RLS de bookings barra os eventos
+// (CHANNEL_ERROR / "WebSocket failed" no navegador). Reaplica a cada mudança de
+// sessão (login, refresh de token). No SIGNED_OUT, volta para a anon key.
+supabase.auth.onAuthStateChange((_event, session) => {
+  supabase.realtime.setAuth(session?.access_token ?? key)
+})
