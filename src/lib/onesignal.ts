@@ -33,6 +33,12 @@ export async function identifyOneSignalUser(userId: string): Promise<void> {
   try {
     await initOneSignal()
     await withTimeout(OneSignal.login(userId))
+    // O SDK não pede permissão de notificação sozinho — precisa ser
+    // solicitada explicitamente. Só pede se o usuário nunca decidiu antes
+    // (evita repetir o prompt a cada login para quem já negou/aceitou).
+    if (OneSignal.Notifications.permission === false && OneSignal.Notifications.permissionNative === 'default') {
+      await withTimeout(OneSignal.Notifications.requestPermission())
+    }
   } catch {
     // silencioso — mesma regra: push nunca quebra o fluxo principal
   }
