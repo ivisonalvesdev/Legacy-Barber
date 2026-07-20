@@ -70,9 +70,10 @@ Reduz o no-show (a dor mais cara da barbearia). **Roda dentro do n8n**, reagindo
 - Chave em `VITE_GOOGLE_MAPS_API_KEY`. **Restrinja por domínio** no console (ela é pública).
 - Tem cota grátis mensal, mas exige cartão cadastrado no Google Cloud.
 
-### 5. Web Push — aviso instantâneo de novo agendamento
-- **OneSignal** (onesignal.com) → New App → Web.
-- App ID (público) em `VITE_ONESIGNAL_APP_ID`; a **REST API Key** (secreta) fica no n8n.
+### 5. Web Push — aviso instantâneo de novo agendamento ✅ integrado
+- **OneSignal** (onesignal.com) → New App → Web. SDK já instalado (`react-onesignal`) e inicializado em `src/lib/onesignal.ts`, chamado a partir de `src/App.tsx` (identifica o usuário logado no login, desloga no logout).
+- App ID (público) em `VITE_ONESIGNAL_APP_ID` — já preenchido no `.env`.
+- Falta: pedir permissão de notificação na UI (prompt do OneSignal) e, quando o n8n estiver ligado, disparar o push de fato a partir do evento `booking.created` via **REST API Key** (secreta, fica no n8n — nunca no navegador).
 
 ### 6. E-mail transacional (produção)
 - O Supabase já envia o e-mail de **confirmação de cadastro** (suficiente para começar).

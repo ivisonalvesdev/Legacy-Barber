@@ -4,6 +4,7 @@ import { Scissors, Menu, X } from 'lucide-react'
 
 import type { AppUser, OpenAuthFn, UserRole } from './types'
 import { supabase } from './lib/supabase'
+import { identifyOneSignalUser, resetOneSignalUser } from './lib/onesignal'
 
 import { AmbientBackground }      from './components/ui/AmbientBackground'
 import { ScissorsBackdrop }       from './components/ui/ScissorsBackdrop'
@@ -108,6 +109,11 @@ export default function App() {
     return () => { subscription.unsubscribe(); clearTimeout(fallback) }
   }, [])
 
+  // ── Push (OneSignal): associa o dispositivo ao usuário logado ──
+  useEffect(() => {
+    if (currentUser) identifyOneSignalUser(currentUser.id)
+  }, [currentUser])
+
   const openAuth: OpenAuthFn = (mode = 'login') => { setAuthMode(mode); setShowAuth(true) }
   const closeAuth = () => setShowAuth(false)
 
@@ -120,6 +126,7 @@ export default function App() {
 
   const logout = async () => {
     await supabase.auth.signOut()
+    await resetOneSignalUser()
     hasUserRef.current = false
     setUser(null)
     setMobile(false)
