@@ -140,32 +140,57 @@ export default function App() {
   // ── Toast em tempo real de novo agendamento (barbeiro e dono) ──
   // Complementa o push do sistema: só aparece com o app aberto, mas usa a
   // identidade visual da marca. Cliente não recebe (é o próprio agendamento dele).
+  // Deps primitivas (não o objeto currentUser) evitam reconectar o canal a cada
+  // render — a referência do objeto muda ao atualizar perfil, o id/role/shop não.
+  const userId       = currentUser?.id
+  const userRole     = currentUser?.role
+  const barbershopId = currentUser?.barbershopId
   useEffect(() => {
-    if (!currentUser || currentUser.role === 'client' || !currentUser.barbershopId) return
+    if (!userId || userRole === 'client' || !barbershopId) return
+
+    let cancelled = false
+
+    // Garante que o Realtime use o token da sessão (a RLS "staff see shop
+    // bookings" precisa do usuário autenticado para liberar o INSERT).
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token
+      if (token) supabase.realtime.setAuth(token)
+    })
+
+    const handleInsert = async (row: {
+      id: string; barber_id: string | null; client_id: string | null
+      client_name: string | null; service_name: string; time: string
+    }) => {
+      if (cancelled) return
+      // Barbeiro só vê os próprios; o dono (admin) vê todos da barbearia.
+      if (userRole === 'barber' && row.barber_id !== userId) return
+
+      // O nome do cliente pode não vir no payload (agendamento pelo app usa
+      // client_id, não client_name) — busca em profiles quando necessário.
+      let client = row.client_name ?? ''
+      if (!client && row.client_id) {
+        const { data } = await supabase.from('profiles').select('name').eq('id', row.client_id).single()
+        client = data?.name ?? ''
+      }
+      if (cancelled) return
+      pushToast({
+        id:      row.id,
+        client:  client || 'Novo cliente',
+        service: row.service_name,
+        time:    row.time,
+      })
+    }
 
     const channel = supabase
-      .channel(`bookings-toast-${currentUser.barbershopId}`)
+      .channel(`bookings-toast-${barbershopId}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'bookings',
-        filter: `barbershop_id=eq.${currentUser.barbershopId}`,
-      }, payload => {
-        const b = payload.new as {
-          id: string; barber_id: string | null
-          client_name: string | null; service_name: string; time: string
-        }
-        // Barbeiro só vê os próprios; o dono (admin) vê todos da barbearia.
-        if (currentUser.role === 'barber' && b.barber_id !== currentUser.id) return
-        pushToast({
-          id:      b.id,
-          client:  b.client_name ?? 'Novo cliente',
-          service: b.service_name,
-          time:    b.time,
-        })
-      })
+        filter: `barbershop_id=eq.${barbershopId}`,
+      }, payload => { void handleInsert(payload.new as Parameters<typeof handleInsert>[0]) })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
-  }, [currentUser])
+    return () => { cancelled = true; supabase.removeChannel(channel) }
+  }, [userId, userRole, barbershopId, pushToast])
 
   const openAuth: OpenAuthFn = (mode = 'login') => { setAuthMode(mode); setShowAuth(true) }
   const closeAuth = () => setShowAuth(false)

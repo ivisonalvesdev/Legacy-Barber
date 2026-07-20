@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, User } from 'lucide-react'
+import { X, Clock, CalendarCheck } from 'lucide-react'
 import { SnipScissors } from './SnipScissors'
 
 export type BookingToastData = {
@@ -15,7 +15,10 @@ interface ToastItemProps {
   onClose: (id: string) => void
 }
 
-const AUTO_DISMISS_MS = 7000
+const AUTO_DISMISS_MS = 8000
+
+const initials = (name: string) =>
+  name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '★'
 
 function ToastItem({ data, onClose }: ToastItemProps) {
   useEffect(() => {
@@ -26,56 +29,83 @@ function ToastItem({ data, onClose }: ToastItemProps) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, x: 80, scale: 0.95 }}
+      initial={{ opacity: 0, x: 90, scale: 0.9 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 80, scale: 0.95, transition: { duration: 0.2 } }}
-      transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-      className="pointer-events-auto relative flex items-start gap-3 p-4 rounded-2xl overflow-hidden"
+      exit={{ opacity: 0, x: 90, scale: 0.9, transition: { duration: 0.25 } }}
+      transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+      className="pointer-events-auto relative overflow-hidden"
       style={{
-        width: 320,
-        background: 'rgba(10,10,10,0.97)',
-        backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
-        border: '1px solid rgba(212,175,55,0.28)',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.55), 0 0 40px rgba(212,175,55,0.08)',
+        width: 340,
+        borderRadius: 18,
+        background: 'linear-gradient(145deg, rgba(18,16,10,0.98) 0%, rgba(8,8,8,0.98) 100%)',
+        backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
+        border: '1px solid rgba(212,175,55,0.32)',
+        boxShadow: '0 24px 70px rgba(0,0,0,0.6), 0 0 50px rgba(212,175,55,0.1), inset 0 1px 0 rgba(212,175,55,0.15)',
       }}>
+
+      {/* brilho dourado no topo */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 60,
+        background: 'radial-gradient(ellipse at top, rgba(212,175,55,0.14), transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* header com selo */}
+      <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2 relative">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(212,175,55,0.14)', border: '1px solid rgba(212,175,55,0.32)' }}>
+          <SnipScissors size={15} speed={0.7} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <CalendarCheck size={12} style={{ color: '#D4AF37' }} />
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.14em', color: 'rgba(212,175,55,0.9)', textTransform: 'uppercase' }}>
+              Novo agendamento
+            </span>
+          </div>
+        </div>
+        <button onClick={() => onClose(data.id)}
+          className="flex-shrink-0 p-1 rounded-md transition-colors hover:bg-white/5"
+          style={{ color: 'rgba(113,113,122,0.55)' }}>
+          <X size={13} />
+        </button>
+      </div>
+
+      {/* corpo: avatar do cliente + detalhes */}
+      <div className="flex items-center gap-3 px-4 pb-3.5">
+        <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{
+            background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(184,149,31,0.1))',
+            border: '1px solid rgba(212,175,55,0.35)',
+            color: '#ECCb52', fontWeight: 700, fontSize: '15px',
+            fontFamily: "'Cormorant Garamond', serif",
+          }}>
+          {initials(data.client)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="truncate" style={{ fontSize: '15px', fontWeight: 600, color: 'rgba(245,245,245,0.96)', lineHeight: 1.25 }}>
+            {data.client}
+          </p>
+          <div className="flex items-center gap-2 mt-1" style={{ fontSize: '12px', color: 'rgba(161,161,170,0.82)' }}>
+            <span className="truncate">{data.service}</span>
+            <span style={{ color: 'rgba(212,175,55,0.4)' }}>•</span>
+            <span className="flex items-center gap-1 flex-shrink-0" style={{ color: 'rgba(212,175,55,0.85)' }}>
+              <Clock size={11} />{data.time}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* barra de progresso do auto-dismiss */}
       <motion.div
         initial={{ scaleX: 1 }} animate={{ scaleX: 0 }}
         transition={{ duration: AUTO_DISMISS_MS / 1000, ease: 'linear' }}
         style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px',
-          background: 'linear-gradient(90deg,#B8951F,#D4AF37,#ECCb52)',
-          transformOrigin: 'left',
+          height: '2.5px', transformOrigin: 'left',
+          background: 'linear-gradient(90deg, #B8951F, #D4AF37, #ECCb52)',
+          boxShadow: '0 0 8px rgba(212,175,55,0.5)',
         }}
       />
-
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)' }}>
-        <SnipScissors size={18} speed={0.8} />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '16px', fontWeight: 700, color: '#D4AF37', lineHeight: 1.2 }}>
-          Novo agendamento!
-        </p>
-        <p className="mt-1 flex items-center gap-1.5" style={{ fontSize: '12.5px', color: 'rgba(230,230,230,0.9)' }}>
-          <User size={12} style={{ color: 'rgba(212,175,55,0.7)', flexShrink: 0 }} />
-          <span className="truncate">{data.client}</span>
-        </p>
-        <p className="mt-0.5" style={{ fontSize: '12px', color: 'rgba(161,161,170,0.8)' }}>
-          {data.service}
-        </p>
-        <p className="mt-1.5 flex items-center gap-1.5" style={{ fontSize: '11px', color: 'rgba(113,113,122,0.72)' }}>
-          <Clock size={11} />
-          {data.time}
-        </p>
-      </div>
-
-      <button onClick={() => onClose(data.id)}
-        className="flex-shrink-0 p-1 rounded-lg transition-colors"
-        style={{ color: 'rgba(113,113,122,0.6)' }}>
-        <X size={14} />
-      </button>
     </motion.div>
   )
 }
