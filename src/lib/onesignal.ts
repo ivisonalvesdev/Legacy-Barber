@@ -17,16 +17,12 @@ function withTimeout(p: Promise<unknown>, ms = 6000): Promise<void> {
  * não faz nada — push é opcional, nunca pode travar o app.
  */
 export function initOneSignal(): Promise<void> {
-  if (!ONESIGNAL_APP_ID) { console.warn('[onesignal] VITE_ONESIGNAL_APP_ID ausente — push desativado'); return Promise.resolve() }
+  if (!ONESIGNAL_APP_ID) return Promise.resolve()
   if (!initPromise) {
-    console.info('[onesignal] iniciando SDK…')
-    initPromise = withTimeout(
-      OneSignal.init({
-        appId: ONESIGNAL_APP_ID,
-        allowLocalhostAsSecureOrigin: import.meta.env.DEV,
-      }).then(() => console.info('[onesignal] SDK inicializado ✅'))
-        .catch(err => console.error('[onesignal] falha no init():', err))
-    )
+    initPromise = withTimeout(OneSignal.init({
+      appId: ONESIGNAL_APP_ID,
+      allowLocalhostAsSecureOrigin: import.meta.env.DEV,
+    }))
   }
   return initPromise
 }
@@ -37,17 +33,14 @@ export async function identifyOneSignalUser(userId: string): Promise<void> {
   try {
     await initOneSignal()
     await withTimeout(OneSignal.login(userId))
-    console.info('[onesignal] permissão atual:', OneSignal.Notifications.permission, '| nativa:', OneSignal.Notifications.permissionNative)
     // O SDK não pede permissão de notificação sozinho — precisa ser
     // solicitada explicitamente. Só pede se o usuário nunca decidiu antes
     // (evita repetir o prompt a cada login para quem já negou/aceitou).
     if (OneSignal.Notifications.permission === false && OneSignal.Notifications.permissionNative === 'default') {
-      console.info('[onesignal] chamando requestPermission()…')
       await withTimeout(OneSignal.Notifications.requestPermission())
-      console.info('[onesignal] após requestPermission():', OneSignal.Notifications.permission)
     }
-  } catch (err) {
-    console.error('[onesignal] erro em identifyOneSignalUser:', err)
+  } catch {
+    // silencioso — push é acessório, nunca pode quebrar o fluxo principal
   }
 }
 
