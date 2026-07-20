@@ -81,13 +81,11 @@ Deno.serve(async (req) => {
       target_channel: 'push',
       headings: { en: '✂️ Novo agendamento!', pt: '✂️ Novo agendamento!' },
       contents: { en: texto, pt: texto },
-      // Identidade visual: ícone da tesoura dourada da marca (em vez do sino
-      // genérico do Chrome). chrome_web_icon = ícone pequeno; chrome_web_image
-      // = banner grande exibido no push expandido.
+      // Identidade visual: só o ícone pequeno da marca (sem banner grande, que
+      // ficava poluído). chrome_web_icon = ícone; chrome_web_badge = monocromático.
       chrome_web_icon:  icon,
       chrome_web_badge: icon,
-      chrome_web_image: icon,
-      // Botão de ação direto na notificação.
+      // Botão de ação direto na notificação (mantido).
       web_buttons: appUrl
         ? [{ id: 'ver-agenda', text: 'Ver agenda', url: appUrl, icon }]
         : undefined,

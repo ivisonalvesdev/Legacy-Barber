@@ -8,10 +8,12 @@ interface AuthInputProps {
   icon: React.ElementType
   placeholder?: string
   rightEl?: React.ReactNode
+  /** Dispara ao apertar Enter dentro do campo (envia o formulário). */
+  onEnter?: () => void
 }
 
 export function AuthInput({
-  label, type = 'text', value, onChange, icon: Icon, placeholder, rightEl,
+  label, type = 'text', value, onChange, icon: Icon, placeholder, rightEl, onEnter,
 }: AuthInputProps) {
   const [focused, setFocused] = useState(false)
 
@@ -35,6 +37,7 @@ export function AuthInput({
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          onKeyDown={e => { if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter() } }}
           placeholder={placeholder}
           className="flex-1 bg-transparent px-3 py-3 text-sm text-white outline-none placeholder-zinc-600"
           style={{ fontFamily: "'DM Sans', sans-serif" }}

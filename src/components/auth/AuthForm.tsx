@@ -337,16 +337,17 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
             />
           )}
 
-          <AuthInput label="E-mail" type="email" value={form.email} onChange={set('email')} icon={Mail} placeholder="seu@email.com" />
+          <AuthInput label="E-mail" type="email" value={form.email} onChange={set('email')} icon={Mail} placeholder="seu@email.com" onEnter={handleSubmit} />
           {mode === 'register' && (
-            <AuthInput label="Telefone / WhatsApp" type="tel" value={form.phone} onChange={set('phone')} icon={Phone} placeholder="(11) 99999-0000" />
+            <AuthInput label="Telefone / WhatsApp" type="tel" value={form.phone} onChange={set('phone')} icon={Phone} placeholder="(11) 99999-0000" onEnter={handleSubmit} />
           )}
           <AuthInput
             label="Senha" type={showPass ? 'text' : 'password'}
             value={form.password} onChange={set('password')}
             icon={Lock} placeholder="••••••••"
+            onEnter={handleSubmit}
             rightEl={
-              <button onClick={() => setShowPass(p => !p)} style={{ color: 'rgba(113,113,122,0.64)' }}>
+              <button type="button" onClick={() => setShowPass(p => !p)} style={{ color: 'rgba(113,113,122,0.64)' }}>
                 {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             }

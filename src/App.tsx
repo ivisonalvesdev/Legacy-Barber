@@ -149,13 +149,7 @@ export default function App() {
     if (!userId || userRole === 'client' || !barbershopId) return
 
     let cancelled = false
-
-    // Garante que o Realtime use o token da sessão (a RLS "staff see shop
-    // bookings" precisa do usuário autenticado para liberar o INSERT).
-    supabase.auth.getSession().then(({ data }) => {
-      const token = data.session?.access_token
-      if (token) supabase.realtime.setAuth(token)
-    })
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
     const handleInsert = async (row: {
       id: string; barber_id: string | null; client_id: string | null
@@ -181,15 +175,27 @@ export default function App() {
       })
     }
 
-    const channel = supabase
-      .channel(`bookings-toast-${barbershopId}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'bookings',
-        filter: `barbershop_id=eq.${barbershopId}`,
-      }, payload => { void handleInsert(payload.new as Parameters<typeof handleInsert>[0]) })
-      .subscribe()
+    // IMPORTANTE: setar o token ANTES de subscrever — a RLS "staff see shop
+    // bookings" precisa do usuário autenticado, e o canal conecta na hora do
+    // .subscribe(). Por isso pegamos a sessão primeiro, depois abrimos o canal.
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return
+      const token = data.session?.access_token
+      if (token) supabase.realtime.setAuth(token)
 
-    return () => { cancelled = true; supabase.removeChannel(channel) }
+      channel = supabase
+        .channel(`bookings-toast-${barbershopId}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'bookings',
+          filter: `barbershop_id=eq.${barbershopId}`,
+        }, payload => { void handleInsert(payload.new as Parameters<typeof handleInsert>[0]) })
+        .subscribe(status => {
+          if (status === 'SUBSCRIBED') console.info('[toast] Realtime conectado ✅')
+          else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[toast] Realtime falhou:', status)
+        })
+    })
+
+    return () => { cancelled = true; if (channel) supabase.removeChannel(channel) }
   }, [userId, userRole, barbershopId, pushToast])
 
   const openAuth: OpenAuthFn = (mode = 'login') => { setAuthMode(mode); setShowAuth(true) }
