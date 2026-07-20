@@ -17,6 +17,9 @@ dist
 dist-ssr
 *.local
 
+# Supabase CLI — metadados locais do link (project-ref, etc), não versionar
+supabase/.temp
+
 # Claude Code
 .claude
 

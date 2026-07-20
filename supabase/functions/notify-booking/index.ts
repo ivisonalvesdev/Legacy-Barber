@@ -71,17 +71,28 @@ Deno.serve(async (req) => {
     const [y, m, d]  = String(booking.date).split('-')
     const dataBR     = d && m && y ? `${d}/${m}/${y}` : booking.date
 
+    const appUrl = Deno.env.get('APP_URL') ?? undefined
+    const icon   = appUrl ? `${appUrl}/onesignal-icon.png` : undefined
+    const texto  = `${clientName} agendou ${booking.service_name} — ${dataBR} às ${booking.time}.`
+
     const payload = {
       app_id: appId,
       include_aliases: { external_id: targets },
       target_channel: 'push',
       headings: { en: '✂️ Novo agendamento!', pt: '✂️ Novo agendamento!' },
-      contents: {
-        en: `${clientName} agendou ${booking.service_name} — ${dataBR} às ${booking.time}.`,
-        pt: `${clientName} agendou ${booking.service_name} — ${dataBR} às ${booking.time}.`,
-      },
-      // Ao clicar, abre o painel da barbearia.
-      url: Deno.env.get('APP_URL') ?? undefined,
+      contents: { en: texto, pt: texto },
+      // Identidade visual: ícone da tesoura dourada da marca (em vez do sino
+      // genérico do Chrome). chrome_web_icon = ícone pequeno; chrome_web_image
+      // = banner grande exibido no push expandido.
+      chrome_web_icon:  icon,
+      chrome_web_badge: icon,
+      chrome_web_image: icon,
+      // Botão de ação direto na notificação.
+      web_buttons: appUrl
+        ? [{ id: 'ver-agenda', text: 'Ver agenda', url: appUrl, icon }]
+        : undefined,
+      // Ao clicar no corpo, abre o painel.
+      url: appUrl,
     }
 
     const res = await fetch('https://api.onesignal.com/notifications', {

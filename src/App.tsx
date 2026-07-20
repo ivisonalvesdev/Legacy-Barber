@@ -10,6 +10,7 @@ import { AmbientBackground }      from './components/ui/AmbientBackground'
 import { ScissorsBackdrop }       from './components/ui/ScissorsBackdrop'
 import { SnipScissors }           from './components/ui/SnipScissors'
 import { Preloader }              from './components/ui/Preloader'
+import { BookingToastStack, useBookingToasts } from './components/ui/BookingToast'
 import { Avatar }                 from './components/ui/Avatar'
 import { LandingPage }            from './components/landing/LandingPage'
 import { AuthModal }              from './components/auth/AuthModal'
@@ -38,6 +39,7 @@ export default function App() {
   // Evita buscar o perfil duas vezes quando INITIAL_SESSION e SIGNED_IN
   // chegam em sequência (ex.: link de confirmação de e-mail)
   const hasUserRef = useRef(false)
+  const { items: toasts, push: pushToast, dismiss: dismissToast } = useBookingToasts()
 
   // Garante que o splash (contagem 0→100%) apareça por completo
   useEffect(() => {
@@ -133,6 +135,36 @@ export default function App() {
   // ── Push (OneSignal): associa o dispositivo ao usuário logado ──
   useEffect(() => {
     if (currentUser) identifyOneSignalUser(currentUser.id)
+  }, [currentUser])
+
+  // ── Toast em tempo real de novo agendamento (barbeiro e dono) ──
+  // Complementa o push do sistema: só aparece com o app aberto, mas usa a
+  // identidade visual da marca. Cliente não recebe (é o próprio agendamento dele).
+  useEffect(() => {
+    if (!currentUser || currentUser.role === 'client' || !currentUser.barbershopId) return
+
+    const channel = supabase
+      .channel(`bookings-toast-${currentUser.barbershopId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'bookings',
+        filter: `barbershop_id=eq.${currentUser.barbershopId}`,
+      }, payload => {
+        const b = payload.new as {
+          id: string; barber_id: string | null
+          client_name: string | null; service_name: string; time: string
+        }
+        // Barbeiro só vê os próprios; o dono (admin) vê todos da barbearia.
+        if (currentUser.role === 'barber' && b.barber_id !== currentUser.id) return
+        pushToast({
+          id:      b.id,
+          client:  b.client_name ?? 'Novo cliente',
+          service: b.service_name,
+          time:    b.time,
+        })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [currentUser])
 
   const openAuth: OpenAuthFn = (mode = 'login') => { setAuthMode(mode); setShowAuth(true) }
@@ -270,6 +302,8 @@ export default function App() {
           </div>
         </main>
       </div>
+
+      <BookingToastStack items={toasts} onDismiss={dismissToast} />
     </div>
   )
 }

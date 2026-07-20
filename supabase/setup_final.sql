@@ -259,6 +259,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS bookings_slot_unique
   ON public.bookings (barber_id, date, time)
   WHERE status <> 'cancelled';
 
+-- Realtime: o front escuta INSERT em bookings para mostrar o toast de "novo
+-- agendamento" na hora (barbeiro/dono com o app aberto). Idempotente — não
+-- falha se a tabela já estiver na publicação.
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings;
+EXCEPTION WHEN duplicate_object THEN
+  NULL;
+END $$;
+
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 4. FUNÇÕES E TRIGGERS
