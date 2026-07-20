@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion'
-import { Scissors, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { NAV_MAP } from './nav'
 import { Avatar } from '../ui/Avatar'
+import { SnipScissors } from '../ui/SnipScissors'
 
 interface SidebarProps {
   user: AppUser
@@ -20,12 +21,12 @@ export function Sidebar({ user, activeTab, setActiveTab, onLogout }: SidebarProp
       backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
       borderRight: '1px solid rgba(255,255,255,0.05)',
     }}>
-      {/* Logo */}
+      {/* Logo — corta ao passar o mouse */}
       <div className="px-5 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <div className="flex items-center gap-3">
+        <div className="logo-snip flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.22)' }}>
-            <Scissors size={13} style={{ color: '#D4AF37' }} />
+            <SnipScissors size={15} speed={0.5} hoverOnly />
           </div>
           <div>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '17px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>

@@ -647,25 +647,44 @@ CREATE POLICY "avatars user writes own" ON storage.objects
     AND (storage.foldername(name))[2] = auth.uid()::text
   );
 
--- Logo da barbearia: só o dono dela
+-- Logo da barbearia: o dono dela. Aceita o vínculo por DUAS vias — owner_id
+-- da barbearia OU admin com profiles.barbershop_id apontando para ela. A
+-- segunda via cobre barbearias antigas/demo cujo owner_id ficou nulo ou
+-- dessincronizado (era a causa do "erro de policy" ao trocar a logo).
 CREATE POLICY "avatars owner writes shop" ON storage.objects
   FOR ALL
   USING (
     bucket_id = 'avatars'
     AND (storage.foldername(name))[1] = 'shops'
-    AND EXISTS (
-      SELECT 1 FROM public.barbershops b
-      WHERE b.id::text = (storage.foldername(name))[2]
-        AND b.owner_id = auth.uid()
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.barbershops b
+        WHERE b.id::text = (storage.foldername(name))[2]
+          AND b.owner_id = auth.uid()
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.profiles p
+        WHERE p.id = auth.uid()
+          AND p.role = 'admin'
+          AND p.barbershop_id::text = (storage.foldername(name))[2]
+      )
     )
   )
   WITH CHECK (
     bucket_id = 'avatars'
     AND (storage.foldername(name))[1] = 'shops'
-    AND EXISTS (
-      SELECT 1 FROM public.barbershops b
-      WHERE b.id::text = (storage.foldername(name))[2]
-        AND b.owner_id = auth.uid()
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.barbershops b
+        WHERE b.id::text = (storage.foldername(name))[2]
+          AND b.owner_id = auth.uid()
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.profiles p
+        WHERE p.id = auth.uid()
+          AND p.role = 'admin'
+          AND p.barbershop_id::text = (storage.foldername(name))[2]
+      )
     )
   );
 

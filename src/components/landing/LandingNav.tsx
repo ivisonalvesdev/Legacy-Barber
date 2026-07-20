@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Scissors, LogIn, UserPlus, Menu, X } from 'lucide-react'
+import { LogIn, UserPlus, Menu, X } from 'lucide-react'
+import { SnipScissors } from '../ui/SnipScissors'
 import type { OpenAuthFn } from '../../types'
 
 interface LandingNavProps {
@@ -36,11 +37,11 @@ export function LandingNav({ onOpenAuth }: LandingNavProps) {
           transition: 'all 0.3s ease',
         }}>
 
-        {/* Logo */}
-        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2.5">
+        {/* Logo — a tesoura corta ao passar o mouse (classe logo-snip) */}
+        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="logo-snip flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)' }}>
-            <Scissors size={13} style={{ color: '#D4AF37' }} />
+            <SnipScissors size={15} speed={0.5} hoverOnly />
           </div>
           <div>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>

@@ -1,4 +1,4 @@
-import { Scissors } from 'lucide-react'
+import { SnipScissors } from '../ui/SnipScissors'
 
 export function LandingFooter() {
   return (
@@ -6,10 +6,10 @@ export function LandingFooter() {
       <div className="max-w-6xl mx-auto">
         <div className="grid md:grid-cols-4 gap-8 mb-10">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2.5 mb-4">
+            <div className="logo-snip flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center"
                 style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.22)' }}>
-                <Scissors size={13} style={{ color: '#D4AF37' }} />
+                <SnipScissors size={15} speed={0.5} hoverOnly />
               </div>
               <div>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>

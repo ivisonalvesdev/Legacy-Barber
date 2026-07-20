@@ -96,6 +96,13 @@ button, input, textarea, select { font: inherit; }
   animation-delay: var(--snip-delay, 0s);
 }
 .snip-b { animation-name: snip-blade-b; }
+
+/* Logo: a tesoura fica parada e só "corta" enquanto o mouse está em cima.
+   .snip-hover marca o SVG; o corte liga no :hover do container .logo-snip. */
+.snip-hover .snip-a, .snip-hover .snip-b { animation-play-state: paused; }
+.logo-snip:hover .snip-hover .snip-a,
+.logo-snip:hover .snip-hover .snip-b { animation-play-state: running; }
+
 @media (prefers-reduced-motion: reduce) {
   .snip-a, .snip-b { animation: none; }
 }

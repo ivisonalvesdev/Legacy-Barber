@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Scissors, Menu, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 
 import type { AppUser, OpenAuthFn, UserRole } from './types'
 import { supabase } from './lib/supabase'
@@ -8,6 +8,7 @@ import { identifyOneSignalUser, resetOneSignalUser } from './lib/onesignal'
 
 import { AmbientBackground }      from './components/ui/AmbientBackground'
 import { ScissorsBackdrop }       from './components/ui/ScissorsBackdrop'
+import { SnipScissors }           from './components/ui/SnipScissors'
 import { Preloader }              from './components/ui/Preloader'
 import { Avatar }                 from './components/ui/Avatar'
 import { LandingPage }            from './components/landing/LandingPage'
@@ -197,10 +198,10 @@ export default function App() {
       {/* Mobile header */}
       <header className="md:hidden relative z-50 flex items-center justify-between px-4 py-3"
         style={{ background: 'rgba(5,5,5,0.92)', backdropFilter: 'blur(22px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <div className="flex items-center gap-2">
+        <div className="logo-snip flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center"
             style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.22)' }}>
-            <Scissors size={12} style={{ color: '#D4AF37' }} />
+            <SnipScissors size={14} speed={0.5} hoverOnly />
           </div>
           <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '17px', fontWeight: 700, color: '#D4AF37' }}>LEGACY</span>
         </div>

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import type { AppUser, UserRole } from '../../types'
 import { AuthInput } from '../ui/AuthInput'
+import { SnipScissors } from '../ui/SnipScissors'
 import { supabase }  from '../../lib/supabase'
 
 interface AuthFormProps {
@@ -224,14 +225,14 @@ export function AuthForm({ onAuth, initialMode = 'login' }: AuthFormProps) {
       border: '1px solid rgba(255,255,255,0.07)',
       boxShadow: '0 40px 100px rgba(0,0,0,0.6)',
     }}>
-      {/* Logo */}
-      <div className="flex items-center gap-3 mb-6">
+      {/* Logo — corta ao passar o mouse */}
+      <div className="logo-snip flex items-center gap-3 mb-6">
         <motion.div
           animate={{ boxShadow: ['0 0 16px rgba(212,175,55,0.25)', '0 0 36px rgba(212,175,55,0.55)', '0 0 16px rgba(212,175,55,0.25)'] }}
           transition={{ duration: 2.5, repeat: Infinity }}
           className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.28)' }}>
-          <Scissors size={15} style={{ color: '#D4AF37' }} />
+          <SnipScissors size={16} speed={0.5} hoverOnly />
         </motion.div>
         <div>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 700, color: '#D4AF37', lineHeight: 1 }}>LEGACY</div>

@@ -7,6 +7,9 @@ interface SnipScissorsProps {
   /** Duração de um ciclo de corte, em segundos */
   speed?:       number
   delay?:       number
+  /** Quando true, a tesoura só corta enquanto o mouse está sobre o container
+   *  .logo-snip (usado na logo). Sem isto, corta continuamente. */
+  hoverOnly?:   boolean
 }
 
 /**
@@ -14,12 +17,13 @@ interface SnipScissorsProps {
  * separada nas duas metades — cada uma gira em torno do parafuso (12,12)
  * em sentidos opostos (keyframes .snip-a/.snip-b no index.css).
  */
-export function SnipScissors({ size = 22, color = '#D4AF37', strokeWidth = 2, speed = 1.8, delay = 0 }: SnipScissorsProps) {
+export function SnipScissors({ size = 22, color = '#D4AF37', strokeWidth = 2, speed = 1.8, delay = 0, hoverOnly = false }: SnipScissorsProps) {
   const style = { '--snip-dur': `${speed}s`, '--snip-delay': `${delay}s` } as CSSProperties
 
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
-      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
+      className={hoverOnly ? 'snip-hover' : undefined} style={style}>
       {/* metade A: cabo superior-esquerdo + lâmina para baixo-direita */}
       <g className="snip-a">
         <circle cx="6" cy="6" r="3" />
