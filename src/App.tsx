@@ -48,6 +48,10 @@ export default function App() {
   useEffect(() => {
     let active = true
 
+    // Rede de segurança: se qualquer chamada de auth pendurar (lock travado,
+    // rede fora), libera o app em 6s em vez de ficar preso no preloader.
+    const safety = setTimeout(() => { if (active) setAuthLoading(false) }, 6000)
+
     const fetchProfile = async (userId: string, email: string) => {
       try {
         const { data } = await supabase
@@ -82,6 +86,8 @@ export default function App() {
         }
       } catch (err) {
         console.error('[fetchProfile] Falha ao restaurar sessão:', err)
+      } finally {
+        if (active) setAuthLoading(false)
       }
     }
 
@@ -93,21 +99,26 @@ export default function App() {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user && !hasUserRef.current) {
           await fetchProfile(session.user.id, session.user.email!)
+        } else if (active) {
+          setAuthLoading(false)
         }
       } catch (err) {
         console.error('[auth] Falha ao restaurar sessão:', err)
-      } finally {
-        if (active) setAuthLoading(false)   // sempre libera — sucesso, erro ou sem sessão
+        if (active) setAuthLoading(false)
       }
     }
     restore()
 
-    // Escuta mudanças posteriores (login/logout e link de confirmação de e-mail).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Escuta mudanças posteriores (login/logout, link de confirmação de e-mail).
+    // IMPORTANTE: NÃO usar await de outra query supabase DENTRO deste callback —
+    // o SDK segura um lock durante o callback e o await de .from(...) causa
+    // deadlock (o app trava eternamente ao dar refresh logado). Por isso o
+    // fetchProfile é disparado em setTimeout(0), FORA do lock do callback.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
         if (session?.user && !hasUserRef.current) {
-          await fetchProfile(session.user.id, session.user.email!)
-          if (active) setAuthLoading(false)
+          const { id, email } = session.user
+          setTimeout(() => { if (active) fetchProfile(id, email!) }, 0)
         }
       } else if (event === 'SIGNED_OUT') {
         hasUserRef.current = false
@@ -115,7 +126,7 @@ export default function App() {
       }
     })
 
-    return () => { active = false; subscription.unsubscribe() }
+    return () => { active = false; clearTimeout(safety); subscription.unsubscribe() }
   }, [])
 
   // ── Push (OneSignal): associa o dispositivo ao usuário logado ──
