@@ -72,7 +72,9 @@ Deno.serve(async (req) => {
     const dataBR     = d && m && y ? `${d}/${m}/${y}` : booking.date
 
     const appUrl = Deno.env.get('APP_URL') ?? undefined
-    const icon   = appUrl ? `${appUrl}/onesignal-icon.png` : undefined
+    // ?v= força a OneSignal a rebaixar o ícone quando ele muda (o nome do
+    // arquivo é fixo, então sem versão ela serviria a imagem antiga em cache).
+    const icon   = appUrl ? `${appUrl}/onesignal-icon.png?v=2` : undefined
     const texto  = `${clientName} agendou ${booking.service_name} — ${dataBR} às ${booking.time}.`
 
     const payload = {
