@@ -46,6 +46,8 @@ export default function App() {
 
   // ── Restaura sessão ao recarregar a página ─────────────────
   useEffect(() => {
+    let active = true
+
     const fetchProfile = async (userId: string, email: string) => {
       try {
         const { data } = await supabase
@@ -54,7 +56,7 @@ export default function App() {
           .eq('id', userId)
           .single()
 
-        if (data) {
+        if (data && active) {
           let barbershopName: string | undefined
           if (data.barbershop_id) {
             const { data: shop } = await supabase
@@ -80,33 +82,40 @@ export default function App() {
         }
       } catch (err) {
         console.error('[fetchProfile] Falha ao restaurar sessão:', err)
-      } finally {
-        setAuthLoading(false)
       }
     }
 
-    // Timeout de segurança: se Supabase não responder em 8s, libera a landing page
-    const fallback = setTimeout(() => setAuthLoading(false), 8000)
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      clearTimeout(fallback)
-      // SIGNED_IN também entra: é o evento disparado quando o usuário chega
-      // pelo link de confirmação de e-mail (detectSessionInUrl) — sem ele,
-      // quem confirma o cadastro cairia na landing deslogado.
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+    // Restauração determinística: pergunta a sessão diretamente, em vez de
+    // depender só do evento INITIAL_SESSION (que pode demorar/não chegar num
+    // primeiro load frio). Libera o app assim que a resposta chega.
+    const restore = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
         if (session?.user && !hasUserRef.current) {
           await fetchProfile(session.user.id, session.user.email!)
-        } else if (event === 'INITIAL_SESSION') {
-          setAuthLoading(false)
+        }
+      } catch (err) {
+        console.error('[auth] Falha ao restaurar sessão:', err)
+      } finally {
+        if (active) setAuthLoading(false)   // sempre libera — sucesso, erro ou sem sessão
+      }
+    }
+    restore()
+
+    // Escuta mudanças posteriores (login/logout e link de confirmação de e-mail).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN') {
+        if (session?.user && !hasUserRef.current) {
+          await fetchProfile(session.user.id, session.user.email!)
+          if (active) setAuthLoading(false)
         }
       } else if (event === 'SIGNED_OUT') {
         hasUserRef.current = false
-        setUser(null)
-        setAuthLoading(false)
+        if (active) { setUser(null); setAuthLoading(false) }
       }
     })
 
-    return () => { subscription.unsubscribe(); clearTimeout(fallback) }
+    return () => { active = false; subscription.unsubscribe() }
   }, [])
 
   // ── Push (OneSignal): associa o dispositivo ao usuário logado ──
