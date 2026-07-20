@@ -4,7 +4,7 @@ import { CalendarPlus, X, Check, User } from 'lucide-react'
 import type { AppUser, Service } from '../../types'
 import { TIME_SLOTS, DEFAULT_SERVICES } from '../../data/defaults'
 import { supabase } from '../../lib/supabase'
-import { fireEvent } from '../../lib/integrations'
+import { fireEvent, notifyBooking } from '../../lib/integrations'
 
 interface NewBookingModalProps {
   user:      AppUser
@@ -82,7 +82,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
     }
     setSaving(true)
     setError('')
-    const { error: err } = await supabase.from('bookings').insert({
+    const { data: created, error: err } = await supabase.from('bookings').insert({
       client_id:     null,
       client_name:   clientName.trim(),
       barber_id:     barberId,
@@ -92,7 +92,7 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
       date,
       time,
       status:        'upcoming',
-    })
+    }).select('id').single()
     setSaving(false)
     if (err) {
       setError(err.code === '23505'
@@ -100,6 +100,9 @@ export function NewBookingModal({ user, open, onClose, onCreated }: NewBookingMo
         : 'Erro ao criar agendamento. Execute supabase/setup_final.sql se ainda não rodou.')
       return
     }
+    // Push (Edge Function): avisa o barbeiro designado. Dedup no servidor
+    // evita notificar o próprio admin quando ele é o barbeiro.
+    if (created?.id) notifyBooking(created.id)
     // Automação (n8n): mesmo evento do agendamento pelo cliente, marcado
     // como walk-in. O barbeiro é conhecido pelo id; nome resolvido no n8n.
     fireEvent('booking.created', {

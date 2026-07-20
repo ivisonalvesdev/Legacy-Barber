@@ -5,7 +5,7 @@ import type { AppUser, Service, Barbershop } from '../../types'
 import { formatAddress } from '../../types'
 import { TIME_SLOTS } from '../../data/defaults'
 import { supabase } from '../../lib/supabase'
-import { fireEvent } from '../../lib/integrations'
+import { fireEvent, notifyBooking } from '../../lib/integrations'
 import { Avatar } from '../ui/Avatar'
 
 interface ClientViewProps {
@@ -291,7 +291,7 @@ export function ClientView({ user }: ClientViewProps) {
     if (!selService || !selBarber || !selShop || !selTime) return
     setSaving(true)
     setBookingErr('')
-    const { error } = await supabase.from('bookings').insert({
+    const { data: created, error } = await supabase.from('bookings').insert({
       client_id:     user.id,
       barber_id:     selBarber.id,
       barbershop_id: selShop.id,   // ← tenant isolation (o banco reconfere)
@@ -300,7 +300,7 @@ export function ClientView({ user }: ClientViewProps) {
       date:          selDate,
       time:          selTime,
       status:        'upcoming',
-    })
+    }).select('id').single()
     setSaving(false)
     if (error) {
       // 23505 = violação do índice único (slot acabou de ser ocupado)
@@ -317,6 +317,8 @@ export function ClientView({ user }: ClientViewProps) {
       }
     } else {
       setConfirmed(true)
+      // Push (Edge Function): avisa barbeiro e dono na hora. Independe do n8n.
+      if (created?.id) notifyBooking(created.id)
       // Automação (n8n): base para confirmação/lembrete via WhatsApp.
       // Não bloqueia — o agendamento já está salvo.
       fireEvent('booking.created', {

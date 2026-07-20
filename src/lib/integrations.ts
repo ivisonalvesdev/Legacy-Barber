@@ -14,6 +14,8 @@
  * ═══════════════════════════════════════════════════════════════
  */
 
+import { supabase } from './supabase'
+
 const env = import.meta.env
 
 // URLs públicas (grátis, sem chave)
@@ -146,5 +148,24 @@ export async function fireEvent(event: AppEvent, payload: Record<string, unknown
     })
   } catch {
     // silencioso de propósito — automação é acessório, não pode quebrar o app
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Push de novo agendamento — via Supabase Edge Function
+//  (independe do n8n; o segredo do OneSignal fica no servidor).
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Pede à Edge Function `notify-booking` que dispare o push para o barbeiro e
+ * o dono da barbearia. Fire-and-forget: nunca lança nem trava o agendamento,
+ * que já está salvo. Se a função não estiver publicada, apenas falha em
+ * silêncio.
+ */
+export async function notifyBooking(bookingId: string): Promise<void> {
+  try {
+    await supabase.functions.invoke('notify-booking', { body: { bookingId } })
+  } catch {
+    // silencioso — notificação é acessório, não pode quebrar o app
   }
 }
