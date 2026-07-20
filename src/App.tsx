@@ -175,9 +175,12 @@ export default function App() {
       })
     }
 
-    // O supabase-js já propaga o token de auth para o Realtime internamente
-    // (via onAuthStateChange). Abrimos o canal direto; a RLS "staff see shop
-    // bookings" libera os eventos para o barbeiro/dono autenticado.
+    // Abrimos o canal do toast em tempo real. Em algumas redes (firewall /
+    // antivírus com inspeção SSL) o WebSocket do Realtime não abre — nesse caso
+    // desistimos após poucas falhas em vez de reconectar em loop (que polui o
+    // console). O app funciona normal sem o toast; o push do OneSignal cobre o
+    // aviso mesmo com o app fechado.
+    let failures = 0
     channel = supabase
       .channel(`bookings-toast-${barbershopId}`)
       .on('postgres_changes', {
@@ -185,8 +188,17 @@ export default function App() {
         filter: `barbershop_id=eq.${barbershopId}`,
       }, payload => { void handleInsert(payload.new as Parameters<typeof handleInsert>[0]) })
       .subscribe(status => {
-        if (status === 'SUBSCRIBED') console.info('[toast] Realtime conectado ✅')
-        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[toast] Realtime falhou:', status)
+        if (status === 'SUBSCRIBED') {
+          failures = 0
+          console.info('[toast] Realtime conectado ✅')
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          failures += 1
+          // Após 3 falhas, para de tentar — evita o loop de reconexão no console.
+          if (failures >= 3 && channel) {
+            supabase.removeChannel(channel)
+            channel = null
+          }
+        }
       })
 
     return () => { cancelled = true; if (channel) supabase.removeChannel(channel) }
