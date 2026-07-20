@@ -15,6 +15,21 @@ if (!url || !key) {
 // deadlock na origem.
 const noOpLock = async <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> => fn()
 
+// Lê o access_token direto do storage onde o supabase-js persiste a sessão.
+// Usado pelo Realtime (accessToken) sem referenciar o próprio client — evita a
+// referência circular que quebraria a inferência de tipos.
+const STORAGE_KEY = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`
+const readToken = async (): Promise<string> => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed?.access_token) return parsed.access_token as string
+    }
+  } catch { /* storage indisponível — cai no anon */ }
+  return key
+}
+
 // Sessão persistente explícita: o login fica salvo no navegador (localStorage)
 // e o token renova sozinho — o usuário só sai quando clica em "Sair".
 // detectSessionInUrl processa o link de confirmação de e-mail: ao clicar no
@@ -26,12 +41,8 @@ export const supabase = createClient(url, key, {
     detectSessionInUrl: true,
     lock:               noOpLock,
   },
-})
-
-// Mantém o WebSocket do Realtime autenticado com o JWT do usuário. Sem isto o
-// socket abre só com a anon key e a RLS de bookings barra os eventos
-// (CHANNEL_ERROR / "WebSocket failed" no navegador). Reaplica a cada mudança de
-// sessão (login, refresh de token). No SIGNED_OUT, volta para a anon key.
-supabase.auth.onAuthStateChange((_event, session) => {
-  supabase.realtime.setAuth(session?.access_token ?? key)
+  // JWT do usuário para TODAS as camadas, inclusive o WebSocket do Realtime.
+  // Lê do storage (não do client) para evitar circularidade. Sem isto o socket
+  // abre só com a anon key e a RLS de bookings barra os eventos.
+  accessToken: readToken,
 })
