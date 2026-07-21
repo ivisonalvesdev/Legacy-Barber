@@ -175,31 +175,44 @@ export default function App() {
       })
     }
 
-    // Abrimos o canal do toast em tempo real. Em algumas redes (firewall /
-    // antivírus com inspeção SSL) o WebSocket do Realtime não abre — nesse caso
-    // desistimos após poucas falhas em vez de reconectar em loop (que polui o
-    // console). O app funciona normal sem o toast; o push do OneSignal cobre o
-    // aviso mesmo com o app fechado.
-    let failures = 0
-    channel = supabase
-      .channel(`bookings-toast-${barbershopId}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'bookings',
-        filter: `barbershop_id=eq.${barbershopId}`,
-      }, payload => { void handleInsert(payload.new as Parameters<typeof handleInsert>[0]) })
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') {
-          failures = 0
-          console.info('[toast] Realtime conectado ✅')
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          failures += 1
-          // Após 3 falhas, para de tentar — evita o loop de reconexão no console.
-          if (failures >= 3 && channel) {
-            supabase.removeChannel(channel)
-            channel = null
+    // Abre o canal DEPOIS de autenticar o Realtime com o JWT do usuário. Sem
+    // esse passo o socket assina só com a anon key e a RLS de `bookings` pode
+    // barrar os eventos — o toast nunca chega. Aplicamos o token UMA vez, aqui,
+    // antes de assinar: NÃO via onAuthStateChange (causava loop de reconexão
+    // `_reconnectAuth`) nem via a opção `accessToken` do createClient (que
+    // desabilita getSession/login e quebra o app inteiro).
+    const connect = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (cancelled) return
+      await supabase.realtime.setAuth(data.session?.access_token ?? null)
+      if (cancelled) return
+
+      // Em algumas redes (firewall / antivírus com inspeção SSL) o WebSocket do
+      // Realtime não abre — nesse caso desistimos após poucas falhas em vez de
+      // reconectar em loop (que polui o console). O app funciona normal sem o
+      // toast; o push do OneSignal cobre o aviso mesmo com o app fechado.
+      let failures = 0
+      channel = supabase
+        .channel(`bookings-toast-${barbershopId}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'bookings',
+          filter: `barbershop_id=eq.${barbershopId}`,
+        }, payload => { void handleInsert(payload.new as Parameters<typeof handleInsert>[0]) })
+        .subscribe(status => {
+          if (status === 'SUBSCRIBED') {
+            failures = 0
+            console.info('[toast] Realtime conectado ✅')
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            failures += 1
+            // Após 3 falhas, para de tentar — evita o loop de reconexão no console.
+            if (failures >= 3 && channel) {
+              supabase.removeChannel(channel)
+              channel = null
+            }
           }
-        }
-      })
+        })
+    }
+    void connect()
 
     return () => { cancelled = true; if (channel) supabase.removeChannel(channel) }
   }, [userId, userRole, barbershopId, pushToast])
