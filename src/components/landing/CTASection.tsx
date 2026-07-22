@@ -15,7 +15,7 @@ export function CTASection({ onOpenAuth }: CTASectionProps) {
       <TechGrid />
       <AmbientBackground />
       <FloatingScissors variant="cta" />
-      <div className="max-w-3xl mx-auto text-center relative z-10">
+      <div className="max-w-3xl mx-auto text-center relative z-10 wide-zoom">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }} transition={{ duration: 0.7 }}>

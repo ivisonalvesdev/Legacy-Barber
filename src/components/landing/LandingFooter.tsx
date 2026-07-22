@@ -3,7 +3,7 @@ import { SnipScissors } from '../ui/SnipScissors'
 export function LandingFooter() {
   return (
     <footer className="relative z-[1] border-t px-4 md:px-8 py-12" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto wide-zoom">
         <div className="grid md:grid-cols-4 gap-8 mb-10">
           <div className="md:col-span-2">
             <div className="logo-snip flex items-center gap-2.5 mb-4">

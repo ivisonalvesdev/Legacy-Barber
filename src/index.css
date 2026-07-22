@@ -109,3 +109,15 @@ button, input, textarea, select { font: inherit; }
 
 html { scroll-behavior: smooth; }
 body { overflow-x: hidden; }
+
+/* ── Telas grandes (≥ 1600px): aproveita melhor o espaço ────────────────
+   Vale só a partir de 1600px de largura — o caso do monitor Full HD a 100%
+   de escala (viewport ~1920px). O notebook Full HD roda a ~1536px (escala
+   125% do Windows): fica abaixo do corte e NÃO é afetado — continua igual.
+   O zoom vai no container de conteúdo de cada seção (.wide-zoom), nunca na
+   <section>. Assim o min-h-screen (100vh) do hero e o position:fixed do nav
+   seguem intactos; só o conteúdo cresce, junto e proporcionalmente — texto,
+   botões e o mockup em px, tudo na mesma medida. Ajuste fino: 1.15–1.25. */
+@media (min-width: 1600px) {
+  .wide-zoom { zoom: 1.2; }
+}

@@ -28,7 +28,7 @@ export function LandingNav({ onOpenAuth }: LandingNavProps) {
       initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 pt-3 pb-3">
-      <div className="max-w-6xl mx-auto flex items-center justify-between rounded-2xl px-5 py-3"
+      <div className="max-w-6xl mx-auto flex items-center justify-between rounded-2xl px-5 py-3 wide-zoom"
         style={{
           background: scrolled ? 'rgba(5,5,5,0.92)' : 'rgba(5,5,5,0.5)',
           backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',

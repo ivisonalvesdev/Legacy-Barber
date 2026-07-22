@@ -7,7 +7,7 @@ export function FeaturesSection() {
   return (
     <section id="features" className="relative z-[1] py-24 px-4 md:px-8">
       <FloatingScissors variant="features" />
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto wide-zoom">
         <motion.div
           initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }} transition={{ duration: 0.7 }}

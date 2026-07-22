@@ -5,7 +5,7 @@ import { TESTIMONIALS_DATA } from '../../data/landing'
 export function TestimonialsSection() {
   return (
     <section className="relative z-[1] py-20 px-4 md:px-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto wide-zoom">
         <motion.div
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }} transition={{ duration: 0.6 }}

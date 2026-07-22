@@ -19,7 +19,7 @@ export function HeroSection({ onOpenAuth }: HeroSectionProps) {
       <FloatingParticles />
       <FloatingScissors />
 
-      <div className="max-w-7xl mx-auto w-full relative z-10">
+      <div className="max-w-7xl mx-auto w-full relative z-10 wide-zoom">
         <div className="grid md:grid-cols-[1fr,1.35fr] gap-10 items-center">
           {/* Left */}
           <div>
