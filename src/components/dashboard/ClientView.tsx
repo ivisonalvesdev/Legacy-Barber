@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Clock, Star, Heart, Check, ChevronLeft, ChevronRight, CheckCircle, BadgeCheck, Scissors, Search, MapPin, Store, Crown } from 'lucide-react'
+import { Clock, Star, Heart, Check, ChevronLeft, ChevronRight, CheckCircle, BadgeCheck, Scissors, Search, MapPin, Store, Crown, Sparkles } from 'lucide-react'
 import type { AppUser, Service, Barbershop } from '../../types'
 import { formatAddress } from '../../types'
 import { TIME_SLOTS } from '../../data/defaults'
@@ -151,9 +151,11 @@ export function ClientView({ user }: ClientViewProps) {
   const [selShop,    setSelShop]    = useState<Barbershop | null>(null)
   const [selBarber,  setSelBarber]  = useState<Barber | null>(null)
   const [selService, setSelService] = useState<Service | null>(null)
-  const [shops,      setShops]      = useState<Barbershop[]>([])
+  const [shops,      setShops]      = useState<Barbershop[]>([])   // resultados da busca
+  const [myShops,    setMyShops]    = useState<Barbershop[]>([])   // exclusivas: já agendou nelas
+  const [myShopsLoading, setMyLoad] = useState(true)
   const [shopQuery,  setShopQuery]  = useState('')
-  const [shopLoading, setShopLoad]  = useState(true)
+  const [shopLoading, setShopLoad]  = useState(false)
   const [barbers,    setBarbers]    = useState<Barber[]>([])
   const [barberLoading, setBarbLoad] = useState(false)
   const [services,   setServices]   = useState<Service[]>([])
@@ -173,6 +175,11 @@ export function ClientView({ user }: ClientViewProps) {
 
   const prev  = () => step > 1 && setStep((step - 1) as Step)
   const next  = () => canNext && setStep((step + 1) as Step)
+  // Trocar de barbearia invalida tudo que dependia dela
+  const selectShop = (s: Barbershop) => {
+    if (selShop?.id !== s.id) { setSelBarber(null); setSelService(null); setSelTime(null) }
+    setSelShop(s)
+  }
   const reset = () => {
     setConfirmed(false); setStep(1)
     setSelShop(null); setSelBarber(null); setSelService(null); setSelTime(null)
@@ -187,18 +194,24 @@ export function ClientView({ user }: ClientViewProps) {
     { n: 5, label: 'Confirmação'  },
   ]
 
-  // ── Vitrine: barbearias publicadas, filtradas por nome/bairro/cidade ──
+  // ── Busca sob demanda: a vitrine NÃO lista tudo por padrão ──────────────
+  // Exclusividade: sem busca, o cliente vê só as barbearias onde já agendou
+  // (destaque exclusivo). A lista geral aparece apenas quando ele PESQUISA —
+  // assim cada barbearia não fica exposta no meio de dezenas de opções.
   useEffect(() => {
+    const term = normalize(shopQuery)
+    if (!term) { setShops([]); setShopLoad(false); return }
+
     let cancelled = false
+    setShopLoad(true)
     // Espera a digitação parar: sem isto cada tecla vira uma consulta.
     const timer = setTimeout(async () => {
-      setShopLoad(true)
-      let q = supabase.from('barbershops').select(SHOP_COLUMNS).eq('published', true)
-      const term = normalize(shopQuery)
-      if (term) q = q.ilike('search_text', `%${term}%`)
-
       try {
-        const { data } = await q.order('name').limit(50)
+        const { data } = await supabase
+          .from('barbershops').select(SHOP_COLUMNS)
+          .eq('published', true)
+          .ilike('search_text', `%${term}%`)
+          .order('name').limit(50)
         if (cancelled) return
         setShops(((data ?? []) as ShopRow[]).map(toShop))
       } catch {
@@ -206,10 +219,41 @@ export function ClientView({ user }: ClientViewProps) {
       } finally {
         if (!cancelled) setShopLoad(false)
       }
-    }, shopQuery ? 280 : 0)
+    }, 280)
 
     return () => { cancelled = true; clearTimeout(timer) }
   }, [shopQuery])
+
+  // ── Barbearias exclusivas do cliente: aquelas onde ele já agendou ───────
+  // Aparecem grandes, sem precisar buscar — mais recente primeiro.
+  useEffect(() => {
+    let cancelled = false
+    const loadMine = async () => {
+      setMyLoad(true)
+      const { data: bk } = await supabase
+        .from('bookings')
+        .select('barbershop_id, created_at')
+        .eq('client_id', user.id)
+        .not('barbershop_id', 'is', null)
+        .order('created_at', { ascending: false })
+
+      // Dedup preservando a ordem (mais recente primeiro), no máximo 6
+      const ids: string[] = []
+      for (const r of (bk ?? []) as { barbershop_id: string | null }[]) {
+        if (r.barbershop_id && !ids.includes(r.barbershop_id)) ids.push(r.barbershop_id)
+        if (ids.length >= 6) break
+      }
+      if (ids.length === 0) { if (!cancelled) { setMyShops([]); setMyLoad(false) } ; return }
+
+      const { data } = await supabase.from('barbershops').select(SHOP_COLUMNS).in('id', ids).eq('published', true)
+      if (cancelled) return
+      const byId = new Map(((data ?? []) as ShopRow[]).map(r => [r.id, toShop(r)]))
+      setMyShops(ids.map(id => byId.get(id)).filter((s): s is Barbershop => !!s))
+      setMyLoad(false)
+    }
+    loadMine().catch(() => { if (!cancelled) { setMyShops([]); setMyLoad(false) } })
+    return () => { cancelled = true }
+  }, [user.id])
 
   // ── Barbeiros da barbearia escolhida ─────────────────────────
   // O dono (admin) também entra na lista: muitas vezes ele é um dos
@@ -342,6 +386,11 @@ export function ClientView({ user }: ClientViewProps) {
       }
     } else {
       setConfirmed(true)
+      // A barbearia recém-agendada vira "exclusiva" na hora (aparece grande no
+      // próximo agendamento, sem o cliente ter que buscar de novo).
+      if (selShop && !myShops.some(m => m.id === selShop.id)) {
+        setMyShops(prev => [selShop, ...prev].slice(0, 6))
+      }
       // Push (Edge Function): avisa barbeiro e dono na hora. Independe do n8n.
       if (created?.id) notifyBooking(created.id)
       // Automação (n8n): base para confirmação/lembrete via WhatsApp.
@@ -472,54 +521,120 @@ export function ClientView({ user }: ClientViewProps) {
                 style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }} />
             </div>
 
-            <div className="space-y-3">
-              {shopLoading && (
-                <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>Buscando…</p>
-              )}
-              {!shopLoading && shops.length === 0 && (
-                <div className="text-center py-10 rounded-2xl"
-                  style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.07)' }}>
-                  <Store size={22} style={{ color: 'rgba(113,113,122,0.52)', margin: '0 auto 10px' }} />
-                  <p style={{ color: 'rgba(113,113,122,0.82)', fontSize: '13px' }}>
-                    {shopQuery ? 'Nenhuma barbearia encontrada para essa busca.' : 'Nenhuma barbearia disponível ainda.'}
-                  </p>
+            {/* Exclusivas: barbearias onde o cliente já agendou — só sem busca */}
+            {!shopQuery && myShops.length > 0 && (
+              <div className="mb-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={13} style={{ color: '#D4AF37' }} />
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(212,175,55,0.8)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                    Suas barbearias
+                  </span>
                 </div>
-              )}
-              {!shopLoading && shops.map((s, idx) => {
-                const sel  = selShop?.id === s.id
-                const addr = formatAddress(s.address)
-                return (
-                  <motion.button key={s.id}
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(idx, 6) * 0.06 }}
-                    whileHover={{ x: 4 }}
-                    onClick={() => {
-                      // Trocar de barbearia invalida tudo que dependia dela
-                      if (selShop?.id !== s.id) { setSelBarber(null); setSelService(null); setSelTime(null) }
-                      setSelShop(s)
-                    }}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200"
-                    style={{
-                      background: sel ? 'rgba(212,175,55,0.07)' : 'rgba(255,255,255,0.022)',
-                      border: `1px solid ${sel ? 'rgba(212,175,55,0.38)' : 'rgba(255,255,255,0.06)'}`,
-                      boxShadow: sel ? '0 0 30px rgba(212,175,55,0.09)' : 'none',
-                    }}>
-                    <Avatar url={s.logoUrl} fallback={s.name} size={48} rounded="xl" highlight={sel} />
-                    <div className="flex-1 text-left min-w-0">
-                      <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }} className="truncate">{s.name}</div>
-                      {addr ? (
-                        <div className="flex items-center gap-1 mt-1" style={{ color: 'rgba(113,113,122,0.77)', fontSize: '12px' }}>
-                          <MapPin size={10} className="flex-shrink-0" />
-                          <span className="truncate">{addr}</span>
+                <div className="space-y-3">
+                  {myShops.map((s, idx) => {
+                    const sel  = selShop?.id === s.id
+                    const addr = formatAddress(s.address)
+                    return (
+                      <motion.button key={s.id}
+                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08 }}
+                        whileHover={{ scale: 1.015 }}
+                        onClick={() => selectShop(s)}
+                        className="w-full flex items-center gap-4 p-5 rounded-2xl transition-all duration-200 relative"
+                        style={{
+                          background: sel ? 'rgba(212,175,55,0.12)' : 'linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.02))',
+                          border: `1px solid ${sel ? 'rgba(212,175,55,0.55)' : 'rgba(212,175,55,0.28)'}`,
+                          boxShadow: '0 0 40px rgba(212,175,55,0.1)',
+                        }}>
+                        <Avatar url={s.logoUrl} fallback={s.name} size={64} rounded="2xl" highlight />
+                        <div className="flex-1 text-left min-w-0">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full mb-1.5"
+                            style={{
+                              fontSize: '8px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                              background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.08))',
+                              border: '1px solid rgba(212,175,55,0.45)', color: '#D4AF37',
+                            }}>
+                            <Sparkles size={8} /> Exclusivo
+                          </span>
+                          <div style={{ fontWeight: 700, color: 'white', fontSize: '17px' }} className="truncate">{s.name}</div>
+                          {addr ? (
+                            <div className="flex items-center gap-1 mt-1" style={{ color: 'rgba(113,113,122,0.82)', fontSize: '12px' }}>
+                              <MapPin size={11} className="flex-shrink-0" />
+                              <span className="truncate">{addr}</span>
+                            </div>
+                          ) : (
+                            <div style={{ color: 'rgba(113,113,122,0.58)', fontSize: '12px', marginTop: '2px' }}>Endereço não informado</div>
+                          )}
                         </div>
-                      ) : (
-                        <div style={{ color: 'rgba(113,113,122,0.58)', fontSize: '12px', marginTop: '2px' }}>Endereço não informado</div>
-                      )}
-                    </div>
-                    {sel && <Check size={16} style={{ color: '#D4AF37', flexShrink: 0 }} />}
-                  </motion.button>
-                )
-              })}
-            </div>
+                        {sel && <Check size={18} style={{ color: '#D4AF37', flexShrink: 0 }} />}
+                      </motion.button>
+                    )
+                  })}
+                </div>
+                <p style={{ fontSize: '11px', color: 'rgba(113,113,122,0.6)', marginTop: '12px', textAlign: 'center' }}>
+                  Quer outra barbearia? Busque pelo nome acima.
+                </p>
+              </div>
+            )}
+
+            {/* Sem busca e sem histórico: convida a pesquisar (nada é listado) */}
+            {!shopQuery && !myShopsLoading && myShops.length === 0 && (
+              <div className="text-center py-12 rounded-2xl"
+                style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.07)' }}>
+                <Search size={22} style={{ color: 'rgba(212,175,55,0.4)', margin: '0 auto 10px' }} />
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: 500 }}>Busque a sua barbearia</p>
+                <p style={{ color: 'rgba(113,113,122,0.7)', fontSize: '12px', marginTop: '4px' }}>
+                  Digite o nome, bairro ou cidade acima para encontrá-la.
+                </p>
+              </div>
+            )}
+
+            {/* Resultados da busca (só aparece ao pesquisar) */}
+            {shopQuery && (
+              <div className="space-y-3">
+                {shopLoading && (
+                  <p className="text-center py-6" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>Buscando…</p>
+                )}
+                {!shopLoading && shops.length === 0 && (
+                  <div className="text-center py-10 rounded-2xl"
+                    style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.07)' }}>
+                    <Store size={22} style={{ color: 'rgba(113,113,122,0.52)', margin: '0 auto 10px' }} />
+                    <p style={{ color: 'rgba(113,113,122,0.82)', fontSize: '13px' }}>
+                      Nenhuma barbearia encontrada para essa busca.
+                    </p>
+                  </div>
+                )}
+                {!shopLoading && shops.map((s, idx) => {
+                  const sel  = selShop?.id === s.id
+                  const addr = formatAddress(s.address)
+                  return (
+                    <motion.button key={s.id}
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(idx, 6) * 0.06 }}
+                      whileHover={{ x: 4 }}
+                      onClick={() => selectShop(s)}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200"
+                      style={{
+                        background: sel ? 'rgba(212,175,55,0.07)' : 'rgba(255,255,255,0.022)',
+                        border: `1px solid ${sel ? 'rgba(212,175,55,0.38)' : 'rgba(255,255,255,0.06)'}`,
+                        boxShadow: sel ? '0 0 30px rgba(212,175,55,0.09)' : 'none',
+                      }}>
+                      <Avatar url={s.logoUrl} fallback={s.name} size={48} rounded="xl" highlight={sel} />
+                      <div className="flex-1 text-left min-w-0">
+                        <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontSize: '14px' }} className="truncate">{s.name}</div>
+                        {addr ? (
+                          <div className="flex items-center gap-1 mt-1" style={{ color: 'rgba(113,113,122,0.77)', fontSize: '12px' }}>
+                            <MapPin size={10} className="flex-shrink-0" />
+                            <span className="truncate">{addr}</span>
+                          </div>
+                        ) : (
+                          <div style={{ color: 'rgba(113,113,122,0.58)', fontSize: '12px', marginTop: '2px' }}>Endereço não informado</div>
+                        )}
+                      </div>
+                      {sel && <Check size={16} style={{ color: '#D4AF37', flexShrink: 0 }} />}
+                    </motion.button>
+                  )
+                })}
+              </div>
+            )}
           </motion.div>
         )}
 
