@@ -62,7 +62,7 @@ export function SiteBackground() {
 
       {/* Máscara escura uniforme — abaixa o brilho do vídeo por igual para o
           texto de todas as telas (o fundo é fixo atrás do app inteiro) ler bem. */}
-      <div className="absolute inset-0" style={{ background: 'rgba(5,5,5,0.35)' }} />
+      <div className="absolute inset-0" style={{ background: 'rgba(5,5,5,0.44)' }} />
 
       {/* Véu no topo e na base — reforça a leitura nas bordas iluminadas. */}
       <div className="absolute inset-0"
@@ -75,10 +75,12 @@ export function SiteBackground() {
       {showVideo && (
         <div className="absolute bottom-0 right-0"
           style={{
-            width: 'min(40vw, 400px)',
-            height: 'min(26vh, 200px)',
+            width: 'min(46vw, 480px)',
+            height: 'min(34vh, 280px)',
+            // Opaco não só na quina, mas por toda a faixa a ~2cm das bordas (onde
+            // a marca fica). Fica quase sólido até ~44% e só então desvanece.
             background:
-              'radial-gradient(130% 100% at 100% 100%, rgba(5,5,5,0.97) 0%, rgba(5,5,5,0.85) 22%, rgba(5,5,5,0.5) 42%, rgba(5,5,5,0) 65%)',
+              'radial-gradient(120% 100% at 100% 100%, rgba(5,5,5,0.98) 0%, rgba(5,5,5,0.95) 40%, rgba(5,5,5,0.6) 58%, rgba(5,5,5,0) 80%)',
           }} />
       )}
     </div>
