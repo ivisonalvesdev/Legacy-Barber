@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Clock, Star, Check, ChevronLeft, ChevronRight, CheckCircle, BadgeCheck, Scissors, Search, MapPin, Store, Crown } from 'lucide-react'
+import { Clock, Star, Heart, Check, ChevronLeft, ChevronRight, CheckCircle, BadgeCheck, Scissors, Search, MapPin, Store, Crown } from 'lucide-react'
 import type { AppUser, Service, Barbershop } from '../../types'
 import { formatAddress } from '../../types'
 import { TIME_SLOTS } from '../../data/defaults'
 import { supabase } from '../../lib/supabase'
 import { fireEvent, notifyBooking } from '../../lib/integrations'
+import { ratingFromLikes } from '../../lib/rating'
 import { Avatar } from '../ui/Avatar'
 
 interface ClientViewProps {
@@ -19,7 +20,8 @@ type Barber = {
   avatar:       string
   avatarUrl:    string | null
   available:    boolean
-  rating:       number
+  likes:        number   // curtidas recebidas (cada corte concluído vale 1)
+  rating:       number   // nota derivada dos likes (ratingFromLikes)
   barbershopId: string | null
   isOwner:      boolean
 }
@@ -211,32 +213,52 @@ export function ClientView({ user }: ClientViewProps) {
 
   // ── Barbeiros da barbearia escolhida ─────────────────────────
   // O dono (admin) também entra na lista: muitas vezes ele é um dos
-  // barbeiros — aparece primeiro, com o selo de dono.
+  // barbeiros — aparece primeiro, com o selo de dono. A nota (estrelas) de
+  // cada um vem dos likes reais (RPC barber_like_counts), não de um valor fixo.
   useEffect(() => {
     if (!selShop) { setBarbers([]); return }
+    let cancelled = false
     setBarbLoad(true)
-    supabase.from('profiles')
-      .select('id,name,specialty,avatar,avatar_url,barbershop_id,active,role')
-      .in('role', ['barber', 'admin'])
-      .eq('barbershop_id', selShop.id)
-      .eq('active', true)
-      .order('name')
-      .then(({ data }) => {
-        const list: Barber[] = (data ?? []).map(b => ({
+
+    const load = async () => {
+      const [{ data: profs }, { data: likeRows }] = await Promise.all([
+        supabase.from('profiles')
+          .select('id,name,specialty,avatar,avatar_url,barbershop_id,active,role')
+          .in('role', ['barber', 'admin'])
+          .eq('barbershop_id', selShop.id)
+          .eq('active', true)
+          .order('name'),
+        supabase.rpc('barber_like_counts', { p_shop: selShop.id }),
+      ])
+      if (cancelled) return
+
+      const likesByBarber = new Map<string, number>(
+        ((likeRows ?? []) as { barber_id: string; likes: number }[])
+          .map(r => [r.barber_id, Number(r.likes)]),
+      )
+
+      const list: Barber[] = (profs ?? []).map(b => {
+        const likes = likesByBarber.get(b.id) ?? 0
+        return {
           id:           b.id,
           name:         b.name,
           specialty:    b.specialty ?? (b.role === 'admin' ? 'CEO & Barbeiro' : 'Barbeiro'),
           avatar:       b.avatar || b.name,
           avatarUrl:    b.avatar_url ?? null,
           available:    b.active ?? true,
-          rating:       4.9,
+          likes,
+          rating:       ratingFromLikes(likes),
           barbershopId: b.barbershop_id ?? null,
           isOwner:      b.role === 'admin',
-        }))
-        list.sort((a, b) => Number(b.isOwner) - Number(a.isOwner))
-        setBarbers(list)
-        setBarbLoad(false)
-      }, () => { setBarbers([]); setBarbLoad(false) })
+        }
+      })
+      list.sort((a, b) => Number(b.isOwner) - Number(a.isOwner))
+      setBarbers(list)
+      setBarbLoad(false)
+    }
+
+    load().catch(() => { if (!cancelled) { setBarbers([]); setBarbLoad(false) } })
+    return () => { cancelled = true }
   }, [selShop])
 
   // ── Catálogo de serviços da barbearia escolhida ──────────────
@@ -266,16 +288,19 @@ export function ClientView({ user }: ClientViewProps) {
   }, [selShop])
 
   // ── Horários já ocupados do barbeiro na data escolhida ───────
+  // Via RPC taken_slots (SECURITY DEFINER): a RLS de bookings esconde os
+  // agendamentos de OUTROS clientes, então uma consulta direta só devolveria
+  // os do próprio cliente. A RPC devolve apenas os horários (sem quem reservou)
+  // — assim o slot ocupado já aparece riscado e bloqueado, sem vazar dados.
   useEffect(() => {
     if (!selBarber || !selDate) { setTaken(new Set()); return }
-    supabase.from('bookings')
-      .select('time')
-      .eq('barber_id', selBarber.id)
-      .eq('date', selDate)
-      .neq('status', 'cancelled')
+    let cancelled = false
+    supabase.rpc('taken_slots', { p_barber: selBarber.id, p_date: selDate })
       .then(({ data }) => {
-        setTaken(new Set((data ?? []).map(b => b.time)))
-      }, () => setTaken(new Set()))
+        if (cancelled) return
+        setTaken(new Set(((data ?? []) as { time: string }[]).map(r => r.time)))
+      }, () => { if (!cancelled) setTaken(new Set()) })
+    return () => { cancelled = true }
   }, [selBarber, selDate])
 
   // Horários no passado (quando a data é hoje) também ficam bloqueados
@@ -555,10 +580,25 @@ export function ClientView({ user }: ClientViewProps) {
                       <div style={{ color: 'rgba(113,113,122,0.77)', fontSize: '12px', marginTop: '2px' }}>{b.specialty}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-1">
-                        <Star size={12} fill="#D4AF37" style={{ color: '#D4AF37' }} />
-                        <span style={{ fontWeight: 700, color: 'rgba(255,255,255,0.85)', fontSize: '13px' }}>{b.rating}</span>
-                      </div>
+                      {b.likes > 0 ? (
+                        <>
+                          <div className="flex items-center gap-1">
+                            <Star size={12} fill="#D4AF37" style={{ color: '#D4AF37' }} />
+                            <span style={{ fontWeight: 700, color: 'rgba(255,255,255,0.85)', fontSize: '13px' }}>
+                              {b.rating.toFixed(1).replace('.', ',')}
+                            </span>
+                          </div>
+                          <span className="flex items-center gap-1" style={{ fontSize: '10px', color: 'rgba(212,175,55,0.72)', fontWeight: 600 }}>
+                            <Heart size={9} fill="#D4AF37" style={{ color: '#D4AF37' }} />
+                            {b.likes} {b.likes === 1 ? 'curtida' : 'curtidas'}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full"
+                          style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'rgba(212,175,55,0.08)', color: 'rgba(212,175,55,0.75)', border: '1px solid rgba(212,175,55,0.2)' }}>
+                          Novo
+                        </span>
+                      )}
                       {!b.available && <span style={{ fontSize: '9px', color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Indisponível</span>}
                     </div>
                   </motion.button>

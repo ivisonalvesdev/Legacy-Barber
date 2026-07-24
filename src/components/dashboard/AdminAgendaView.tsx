@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Check, X } from 'lucide-react'
+import { Check, X, Plus, Scissors } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
 import { TiltCard } from '../ui/TiltCard'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { NewBookingModal } from './NewBookingModal'
 
-interface BarberViewProps {
+interface AdminAgendaViewProps {
   user: AppUser
 }
 
@@ -14,73 +15,75 @@ type AgendaItem = {
   id:      string
   time:    string
   client:  string
+  barber:  string
   service: string
   price:   number
   status:  'done' | 'current' | 'upcoming'
 }
 
-export function BarberView({ user }: BarberViewProps) {
+// Agenda do dono: mesma capacidade do barbeiro (concluir / cancelar), mas
+// enxergando os agendamentos de TODA a barbearia — inclusive os que caíram
+// para ele como barbeiro. Assim o admin vê o cliente, conclui ou cancela o
+// corte sem depender da conta de um barbeiro.
+export function AdminAgendaView({ user }: AdminAgendaViewProps) {
   const [agenda, setAgenda] = useState<AgendaItem[]>([])
-  const [stats,  setStats]  = useState({ count: 0, revenue: 0 })
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats]   = useState({ count: 0, revenue: 0 })
   const [cancelTarget, setCancelTarget] = useState<AgendaItem | null>(null)
   const [cancelling, setCancelling]     = useState(false)
+  const [showNew, setShowNew]           = useState(false)
 
   const today    = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   const hour     = new Date().getHours()
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
 
-  useEffect(() => {
+  const load = useCallback(async () => {
+    if (!user.barbershopId) { setLoading(false); return }
+    setLoading(true)
     const todayISO = new Date().toISOString().split('T')[0]
-    supabase
+    const { data } = await supabase
       .from('bookings')
-      .select('id, time, service_name, service_price, status, client_name, client:profiles!bookings_client_id_fkey(name)')
-      .eq('barber_id', user.id)
+      .select('id, time, service_name, service_price, status, client_name, client:profiles!bookings_client_id_fkey(name), barber:profiles!bookings_barber_id_fkey(name)')
+      .eq('barbershop_id', user.barbershopId)
       .eq('date', todayISO)
       .neq('status', 'cancelled')
       .order('time')
-      .then(({ data }) => {
-        if (!data) return
-        type Row = {
-          id: string; time: string; service_name: string; service_price: number | string
-          status: string; client_name: string | null; client: { name: string } | null
-        }
-        const items: AgendaItem[] = (data as unknown as Row[]).map(b => ({
-          id:      b.id,
-          time:    b.time,
-          client:  b.client?.name ?? b.client_name ?? 'Cliente',
-          service: b.service_name,
-          price:   Number(b.service_price),
-          status:  b.status as AgendaItem['status'],
-        }))
-        setAgenda(items)
-        setStats({
-          count:   items.length,
-          revenue: items
-            .filter(a => a.status === 'done')
-            .reduce((s, a) => s + a.price, 0),
-        })
-      }, () => {})
-  }, [user.id])
+
+    type Row = {
+      id: string; time: string; service_name: string; service_price: number | string
+      status: string; client_name: string | null
+      client: { name: string } | null; barber: { name: string } | null
+    }
+    const items: AgendaItem[] = ((data ?? []) as unknown as Row[]).map(b => ({
+      id:      b.id,
+      time:    b.time,
+      client:  b.client?.name ?? b.client_name ?? 'Cliente',
+      barber:  b.barber?.name ?? 'Barbeiro',
+      service: b.service_name,
+      price:   Number(b.service_price),
+      status:  b.status as AgendaItem['status'],
+    }))
+    setAgenda(items)
+    setStats({
+      count:   items.length,
+      revenue: items.filter(a => a.status === 'done').reduce((s, a) => s + a.price, 0),
+    })
+    setLoading(false)
+  }, [user.barbershopId])
+
+  useEffect(() => { load() }, [load])
 
   const markDone = async (item: AgendaItem) => {
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status: 'done' })
-      .eq('id', item.id)
+    const { error } = await supabase.from('bookings').update({ status: 'done' }).eq('id', item.id)
     if (error) return
     setAgenda(prev => prev.map(a => a.id === item.id ? { ...a, status: 'done' } : a))
     setStats(prev => ({ ...prev, revenue: prev.revenue + item.price }))
   }
 
-  // Cancelar sai só depois da confirmação (ConfirmDialog) — evita o clique
-  // acidental que apagaria o atendimento sem querer.
   const confirmCancel = async () => {
     if (!cancelTarget) return
     setCancelling(true)
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelled' })
-      .eq('id', cancelTarget.id)
+    const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', cancelTarget.id)
     setCancelling(false)
     if (!error) {
       const wasDone = cancelTarget.status === 'done'
@@ -96,29 +99,37 @@ export function BarberView({ user }: BarberViewProps) {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,5.5vw,34px)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
-          {greeting}, {user.name.split(' ')[0]}
-        </h1>
-        <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
-          {today.charAt(0).toUpperCase() + today.slice(1)}
-          {user.specialty && <span style={{ color: 'rgba(212,175,55,0.5)', marginLeft: '8px' }}>· {user.specialty}</span>}
-        </p>
-
-        <div className="grid grid-cols-2 gap-3 mt-5">
-          <TiltCard className="rounded-xl p-4"
-            style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Atendimentos</div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: 'white' }}>{stats.count || '—'}</div>
-            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '2px' }}>hoje</div>
-          </TiltCard>
-          <TiltCard className="rounded-xl p-4"
-            style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.15)', boxShadow: '0 0 30px rgba(212,175,55,0.06)' }}>
-            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Faturamento</div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: '#D4AF37' }}>R$ {stats.revenue || '—'}</div>
-            <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '2px' }}>hoje</div>
-          </TiltCard>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,5.5vw,34px)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
+            {greeting}, {user.name.split(' ')[0]}
+          </h1>
+          <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
+            {today.charAt(0).toUpperCase() + today.slice(1)}
+            <span style={{ color: 'rgba(212,175,55,0.5)', marginLeft: '8px' }}>· {user.barbershopName || 'Sua barbearia'}</span>
+          </p>
         </div>
+        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => setShowNew(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium"
+          style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)', color: '#D4AF37' }}>
+          <Plus size={13} /> Novo Agendamento
+        </motion.button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <TiltCard className="rounded-xl p-4"
+          style={{ background: 'rgba(255,255,255,0.022)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Atendimentos</div>
+          <div style={{ fontSize: '28px', fontWeight: 700, color: 'white' }}>{stats.count || '—'}</div>
+          <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '2px' }}>hoje</div>
+        </TiltCard>
+        <TiltCard className="rounded-xl p-4"
+          style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.15)', boxShadow: '0 0 30px rgba(212,175,55,0.06)' }}>
+          <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.82)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Faturamento</div>
+          <div style={{ fontSize: '28px', fontWeight: 700, color: '#D4AF37' }}>R$ {stats.revenue || '—'}</div>
+          <div style={{ fontSize: '11px', color: 'rgba(113,113,122,0.64)', marginTop: '2px' }}>concluído hoje</div>
+        </TiltCard>
       </div>
 
       {/* Agenda */}
@@ -129,15 +140,18 @@ export function BarberView({ user }: BarberViewProps) {
         <div className="space-y-2 relative">
           <div className="absolute left-[21px] top-3 bottom-3 w-px"
             style={{ background: 'linear-gradient(to bottom, rgba(212,175,55,0.14), rgba(255,255,255,0.03))' }} />
-          {agenda.length === 0 && (
+          {!loading && agenda.length === 0 && (
             <p className="text-center py-6 pl-8" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>
               Nenhum agendamento para hoje.
             </p>
           )}
+          {loading && (
+            <p className="text-center py-6 pl-8" style={{ color: 'rgba(113,113,122,0.64)', fontSize: '13px' }}>Carregando…</p>
+          )}
           {agenda.map((slot, idx) => (
             <motion.div key={slot.id}
               initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.07 }}
+              transition={{ delay: idx * 0.06 }}
               className="flex items-center gap-3 relative"
               style={{ opacity: slot.status === 'done' ? 0.42 : 1 }}>
               <div className="w-11 flex justify-center flex-shrink-0 relative z-10">
@@ -172,7 +186,12 @@ export function BarberView({ user }: BarberViewProps) {
                 </span>
                 <div className="flex-1 min-w-0">
                   <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.88)', fontSize: '13px' }} className="truncate">{slot.client}</div>
-                  <div style={{ color: 'rgba(113,113,122,0.82)', fontSize: '12px' }} className="truncate">{slot.service}</div>
+                  <div className="flex items-center gap-2 truncate" style={{ color: 'rgba(113,113,122,0.82)', fontSize: '12px' }}>
+                    <span className="truncate">{slot.service}</span>
+                    <span className="flex items-center gap-1 flex-shrink-0" style={{ color: 'rgba(212,175,55,0.6)' }}>
+                      <Scissors size={9} />{slot.barber.split(' ')[0]}
+                    </span>
+                  </div>
                 </div>
                 {slot.status === 'done' ? (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
@@ -216,6 +235,13 @@ export function BarberView({ user }: BarberViewProps) {
         loading={cancelling}
         onConfirm={confirmCancel}
         onCancel={() => setCancelTarget(null)}
+      />
+
+      <NewBookingModal
+        user={user}
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        onCreated={load}
       />
     </div>
   )

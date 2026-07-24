@@ -5,13 +5,13 @@ import { FloatingScissors } from '../ui/FloatingScissors'
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="relative z-[1] py-24 px-4 md:px-8">
+    <section id="features" className="relative z-[1] py-16 md:py-24 px-4 md:px-8">
       <FloatingScissors variant="features" />
       <div className="max-w-6xl mx-auto wide-zoom">
         <motion.div
           initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }} transition={{ duration: 0.7 }}
-          className="text-center mb-16">
+          className="text-center mb-10 md:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
             style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.18)' }}>
             <Shield size={11} style={{ color: '#D4AF37' }} />

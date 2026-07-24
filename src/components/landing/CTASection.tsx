@@ -11,7 +11,7 @@ interface CTASectionProps {
 
 export function CTASection({ onOpenAuth }: CTASectionProps) {
   return (
-    <section className="relative z-[1] py-28 px-4 md:px-8 overflow-hidden">
+    <section className="relative z-[1] py-16 md:py-28 px-4 md:px-8 overflow-hidden">
       <TechGrid />
       <AmbientBackground />
       <FloatingScissors variant="cta" />

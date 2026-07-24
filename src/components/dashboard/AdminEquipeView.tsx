@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Plus, X, TrendingUp, Clock, Scissors, Copy, CheckCheck, Crown } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
+import { ratingFromLikes } from '../../lib/rating'
 import { Avatar } from '../ui/Avatar'
 
 interface AdminEquipeViewProps {
@@ -13,6 +14,7 @@ type TeamMember = {
   id:                string
   name:              string
   specialty:         string
+  likes:             number
   rating:            number
   avatar:            string
   avatarUrl:         string | null
@@ -38,7 +40,7 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
 
     const load = async () => {
       try {
-        const [shopRes, membersRes, bookingsRes] = await Promise.all([
+        const [shopRes, membersRes, bookingsRes, likesRes] = await Promise.all([
           // Código de convite — via RPC: a coluna é revogada na tabela para não
           // vazar o código de outras barbearias na vitrine pública.
           supabase.rpc('my_invite_code'),
@@ -55,20 +57,29 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
             .select('barber_id, service_price, status')
             .eq('barbershop_id', user.barbershopId!)
             .eq('date', todayISO),
+
+          // Likes de cada barbeiro — a nota (estrelas) vem daqui, não é fixa
+          supabase.rpc('barber_like_counts', { p_shop: user.barbershopId! }),
         ])
 
         if (shopRes.data) setCode(shopRes.data as string)
 
         const members = membersRes.data ?? []
         const bookings = bookingsRes.data ?? []
+        const likesByBarber = new Map<string, number>(
+          ((likesRes.data ?? []) as { barber_id: string; likes: number }[])
+            .map(r => [r.barber_id, Number(r.likes)]),
+        )
 
         const mapped: TeamMember[] = members.map(m => {
           const myBookings = bookings.filter(b => b.barber_id === m.id)
+          const likes = likesByBarber.get(m.id) ?? 0
           return {
             id:                m.id,
             name:              m.name,
             specialty:         m.specialty  ?? (m.role === 'admin' ? 'CEO & Barbeiro' : 'Barbeiro'),
-            rating:            4.9,
+            likes,
+            rating:            ratingFromLikes(likes),
             avatar:            m.avatar || m.name,
             avatarUrl:         m.avatar_url ?? null,
             active:            m.active     ?? true,
@@ -259,7 +270,8 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
                     {[
                       { label: 'Atendimentos', value: `${m.appointmentsToday}` },
                       { label: 'Faturado hoje', value: `R$ ${m.revenueToday}` },
-                      { label: 'Avaliação',     value: `★ ${m.rating}` },
+                      { label: m.likes > 0 ? `${m.likes} curtida${m.likes === 1 ? '' : 's'}` : 'Avaliação',
+                        value: m.likes > 0 ? `★ ${m.rating.toFixed(1).replace('.', ',')}` : 'Novo' },
                     ].map((stat, j) => (
                       <div key={j} className="rounded-xl p-2.5 text-center"
                         style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.04)' }}>

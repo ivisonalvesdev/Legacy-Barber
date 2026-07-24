@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar, Clock, Scissors, XCircle } from 'lucide-react'
+import { Calendar, Clock, Scissors, XCircle, Heart } from 'lucide-react'
 import type { AppUser, BookingStatus } from '../../types'
 import { supabase } from '../../lib/supabase'
 
@@ -9,13 +9,14 @@ interface ClientBookingsViewProps {
 }
 
 type Booking = {
-  id:      string
-  date:    string
-  time:    string
-  service: string
-  price:   number
-  barber:  string
-  status:  BookingStatus
+  id:       string
+  date:     string
+  time:     string
+  service:  string
+  price:    number
+  barber:   string
+  barberId: string | null
+  status:   BookingStatus
 }
 
 const STATUS_BADGE: Record<BookingStatus, { label: string; color: string; bg: string; border: string }> = {
@@ -34,31 +35,58 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
   const [bookings, setBookings]   = useState<Booking[]>([])
   const [loading, setLoading]     = useState(true)
   const [cancelling, setCancelling] = useState<string | null>(null)
+  const [liked, setLiked]         = useState<Set<string>>(new Set())   // ids de cortes já curtidos
+  const [liking, setLiking]       = useState<string | null>(null)
 
   useEffect(() => {
-    supabase
-      .from('bookings')
-      .select('id, date, time, service_name, service_price, status, barber:profiles!bookings_barber_id_fkey(name)')
-      .eq('client_id', user.id)
-      .order('date', { ascending: false })
-      .order('time', { ascending: false })
-      .then(({ data }) => {
-        type Row = {
-          id: string; date: string; time: string; service_name: string
-          service_price: number | string; status: string; barber: { name: string } | null
-        }
-        if (data) setBookings((data as unknown as Row[]).map(b => ({
-          id:      b.id,
-          date:    b.date,
-          time:    b.time,
-          service: b.service_name,
-          price:   Number(b.service_price),
-          barber:  b.barber?.name ?? 'Barbeiro',
-          status:  b.status as BookingStatus,
-        })))
-        setLoading(false)
-      }, () => { setBookings([]); setLoading(false) })
+    let cancelled = false
+    const load = async () => {
+      const [{ data }, { data: likes }] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select('id, date, time, service_name, service_price, status, barber_id, barber:profiles!bookings_barber_id_fkey(name)')
+          .eq('client_id', user.id)
+          .order('date', { ascending: false })
+          .order('time', { ascending: false }),
+        supabase.from('booking_likes').select('booking_id').eq('client_id', user.id),
+      ])
+      if (cancelled) return
+      type Row = {
+        id: string; date: string; time: string; service_name: string
+        service_price: number | string; status: string
+        barber_id: string | null; barber: { name: string } | null
+      }
+      if (data) setBookings((data as unknown as Row[]).map(b => ({
+        id:       b.id,
+        date:     b.date,
+        time:     b.time,
+        service:  b.service_name,
+        price:    Number(b.service_price),
+        barber:   b.barber?.name ?? 'Barbeiro',
+        barberId: b.barber_id,
+        status:   b.status as BookingStatus,
+      })))
+      setLiked(new Set(((likes ?? []) as { booking_id: string }[]).map(l => l.booking_id)))
+      setLoading(false)
+    }
+    load().catch(() => { if (!cancelled) { setBookings([]); setLoading(false) } })
+    return () => { cancelled = true }
   }, [user.id])
+
+  const like = async (b: Booking) => {
+    if (!b.barberId || liked.has(b.id)) return
+    setLiking(b.id)
+    const { error } = await supabase.from('booking_likes').insert({
+      booking_id: b.id,
+      barber_id:  b.barberId,
+      client_id:  user.id,
+    })
+    setLiking(null)
+    // 23505 = já existe (curtiu em outra aba) — trata como sucesso
+    if (!error || error.code === '23505') {
+      setLiked(prev => new Set(prev).add(b.id))
+    }
+  }
 
   const cancel = async (id: string) => {
     setCancelling(id)
@@ -120,6 +148,27 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)' }}>
             <XCircle size={11} /> {cancelling === b.id ? '…' : 'Cancelar'}
           </button>
+        )}
+
+        {/* Curtir o corte concluído: cada like eleva a nota do barbeiro */}
+        {b.status === 'done' && b.barberId && (
+          liked.has(b.id) ? (
+            <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex-shrink-0"
+              style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.28)' }}>
+              <Heart size={11} fill="#D4AF37" style={{ color: '#D4AF37' }} /> Curtido
+            </span>
+          ) : (
+            <button
+              onClick={() => like(b)}
+              disabled={liking === b.id}
+              title={`Curtir o corte de ${b.barber} — ajuda a nota dele`}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex-shrink-0 transition-all"
+              style={{ background: 'rgba(212,175,55,0.06)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.2)', cursor: liking === b.id ? 'wait' : 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(212,175,55,0.14)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(212,175,55,0.06)' }}>
+              <Heart size={11} /> {liking === b.id ? '…' : 'Curtir corte'}
+            </button>
+          )
         )}
       </motion.div>
     )

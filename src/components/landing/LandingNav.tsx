@@ -28,7 +28,7 @@ export function LandingNav({ onOpenAuth }: LandingNavProps) {
       initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 pt-3 pb-3">
-      <div className="max-w-6xl mx-auto flex items-center justify-between rounded-2xl px-5 py-3 wide-zoom"
+      <div className="max-w-6xl mx-auto flex items-center justify-between rounded-2xl px-4 md:px-5 py-3 wide-zoom"
         style={{
           background: scrolled ? 'rgba(5,5,5,0.92)' : 'rgba(5,5,5,0.5)',
           backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
@@ -62,22 +62,35 @@ export function LandingNav({ onOpenAuth }: LandingNavProps) {
           ))}
         </div>
 
-        {/* Auth buttons */}
-        <div className="flex items-center gap-2.5">
+        {/* Auth buttons — "Entrar" agora aparece também no mobile (cliente
+            antigo quer logar direto, sem abrir o menu nem cair no cadastro). */}
+        <div className="flex items-center gap-2 md:gap-2.5">
           <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
             onClick={() => onOpenAuth('login')}
-            className="hidden md:flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
+            className="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl text-[13px] md:text-sm font-medium transition-all duration-200"
             style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(161,161,170,0.86)' }}
             onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(212,175,55,0.25)'; b.style.color = '#D4AF37' }}
             onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.07)'; b.style.color = 'rgba(161,161,170,0.86)' }}>
             <LogIn size={13} /> Entrar
           </motion.button>
           <motion.button
-            whileHover={{ scale: 1.04, boxShadow: '0 0 40px rgba(212,175,55,0.38)' }} whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.04, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -2px 4px rgba(120,88,8,0.4), 0 0 40px rgba(212,175,55,0.38)' }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => onOpenAuth('register')}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-black"
-            style={{ background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)', letterSpacing: '0.01em' }}>
-            <UserPlus size={13} /> Começar Grátis
+            className="relative flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl text-[13px] md:text-sm font-semibold text-black whitespace-nowrap overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg,#B8951F,#D4AF37,#ECCb52)',
+              letterSpacing: '0.01em',
+              // Bevel 3D: brilho no topo + sombra interna embaixo. Dá a sensação
+              // de que as letras entram no botão (relevo), não que só passeiam
+              // por cima — e o overflow-hidden encaixa o texto na borda arredondada.
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -2px 4px rgba(120,88,8,0.4)',
+            }}>
+            <UserPlus size={13} className="hidden sm:block" />
+            <span className="hidden sm:inline">Começar Grátis</span>
+            {/* Mobile: "Cadastrar" (mais curto que a frase completa, cabe sem
+                aumentar o botão); emboss sutil reforça o 3D das letras. */}
+            <span className="sm:hidden" style={{ textShadow: '0 1px 0 rgba(255,255,255,0.3)' }}>Cadastrar</span>
           </motion.button>
           <button className="md:hidden" onClick={() => setMob(o => !o)} style={{ color: 'rgba(113,113,122,0.86)' }}>
             {mob ? <X size={18} /> : <Menu size={18} />}

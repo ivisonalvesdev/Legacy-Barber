@@ -4,12 +4,12 @@ import { TESTIMONIALS_DATA } from '../../data/landing'
 
 export function TestimonialsSection() {
   return (
-    <section className="relative z-[1] py-20 px-4 md:px-8">
+    <section className="relative z-[1] py-14 md:py-20 px-4 md:px-8">
       <div className="max-w-6xl mx-auto wide-zoom">
         <motion.div
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }} transition={{ duration: 0.6 }}
-          className="text-center mb-14">
+          className="text-center mb-10 md:mb-14">
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,3.5vw,46px)', fontWeight: 700, color: 'white', marginBottom: '8px' }}>
             O que dizem nossos clientes
           </h2>

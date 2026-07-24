@@ -12,11 +12,11 @@ const STATS = [
 export function StatsSection() {
   return (
     <section
-      className="relative z-[1] py-16 px-4 md:px-8 overflow-hidden"
+      className="relative z-[1] py-12 md:py-16 px-4 md:px-8 overflow-hidden"
       style={{ background: 'rgba(212,175,55,0.025)', borderTop: '1px solid rgba(212,175,55,0.08)', borderBottom: '1px solid rgba(212,175,55,0.08)' }}>
       <TechGrid />
       <div className="max-w-6xl mx-auto relative z-10 wide-zoom">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-4 md:gap-8">
           {STATS.map((s, i) => (
             <motion.div key={i}
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}

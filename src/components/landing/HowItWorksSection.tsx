@@ -9,12 +9,12 @@ const STEPS = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative z-[1] py-24 px-4 md:px-8">
+    <section id="how-it-works" className="relative z-[1] py-16 md:py-24 px-4 md:px-8">
       <div className="max-w-6xl mx-auto wide-zoom">
         <motion.div
           initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }} transition={{ duration: 0.7 }}
-          className="text-center mb-16">
+          className="text-center mb-10 md:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
             style={{ background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.18)' }}>
             <Zap size={11} style={{ color: '#D4AF37' }} />
@@ -25,7 +25,7 @@ export function HowItWorksSection() {
           </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 relative">
+        <div className="grid md:grid-cols-3 gap-4 md:gap-6 relative">
           <div className="hidden md:block absolute top-10 left-1/3 right-1/3 h-px"
             style={{ background: 'linear-gradient(to right, rgba(212,175,55,0.15), rgba(212,175,55,0.35), rgba(212,175,55,0.15))' }} />
           {STEPS.map((s, i) => {
@@ -35,7 +35,7 @@ export function HowItWorksSection() {
                 initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ duration: 0.65, delay: i * 0.14 }}
                 whileHover={{ y: -4 }}
-                className="relative text-center rounded-2xl p-8"
+                className="relative text-center rounded-2xl p-6 md:p-8"
                 style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5 relative"
                   style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)' }}>
