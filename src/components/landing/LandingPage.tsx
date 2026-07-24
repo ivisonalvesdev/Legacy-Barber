@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { OpenAuthFn } from '../../types'
-import { HexBackground }        from '../ui/HexBackground'
+import { SiteBackground }       from '../ui/SiteBackground'
 import { LandingNav }          from './LandingNav'
 import { HeroSection }         from './HeroSection'
 import { FeaturesSection }     from './FeaturesSection'
@@ -20,7 +20,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#050505', minHeight: '100vh' }}>
-      <HexBackground />
+      <SiteBackground />
       <LandingNav          onOpenAuth={onOpenAuth} />
       <HeroSection         onOpenAuth={onOpenAuth} />
       <FeaturesSection />
