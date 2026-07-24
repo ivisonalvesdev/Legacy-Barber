@@ -62,7 +62,7 @@ export function SiteBackground() {
 
       {/* Máscara escura uniforme — abaixa o brilho do vídeo por igual para o
           texto de todas as telas (o fundo é fixo atrás do app inteiro) ler bem. */}
-      <div className="absolute inset-0" style={{ background: 'rgba(5,5,5,0.44)' }} />
+      <div className="absolute inset-0" style={{ background: 'rgba(5,5,5,0.58)' }} />
 
       {/* Véu no topo e na base — reforça a leitura nas bordas iluminadas. */}
       <div className="absolute inset-0"
