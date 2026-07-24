@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Check, X } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
 import { TiltCard } from '../ui/TiltCard'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { LiveBadge } from '../ui/LiveBadge'
+import { useRealtimeRefresh } from '../../lib/useRealtimeRefresh'
 
 interface BarberViewProps {
   user: AppUser
@@ -29,7 +31,7 @@ export function BarberView({ user }: BarberViewProps) {
   const hour     = new Date().getHours()
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const todayISO = new Date().toISOString().split('T')[0]
     supabase
       .from('bookings')
@@ -61,6 +63,16 @@ export function BarberView({ user }: BarberViewProps) {
         })
       }, () => {})
   }, [user.id])
+
+  useEffect(() => { load() }, [load])
+
+  // Tempo real: a agenda do barbeiro se atualiza sozinha quando um cliente
+  // agenda com ele, ou quando um corte é concluído/cancelado.
+  const live = useRealtimeRefresh(
+    `barber-agenda-${user.id}`,
+    [{ table: 'bookings', filter: `barber_id=eq.${user.id}` }],
+    load,
+  )
 
   const markDone = async (item: AgendaItem) => {
     const { error } = await supabase
@@ -97,9 +109,12 @@ export function BarberView({ user }: BarberViewProps) {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,5.5vw,34px)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
-          {greeting}, {user.name.split(' ')[0]}
-        </h1>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,5.5vw,34px)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
+            {greeting}, {user.name.split(' ')[0]}
+          </h1>
+          <LiveBadge live={live} />
+        </div>
         <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
           {today.charAt(0).toUpperCase() + today.slice(1)}
           {user.specialty && <span style={{ color: 'rgba(212,175,55,0.5)', marginLeft: '8px' }}>· {user.specialty}</span>}

@@ -6,7 +6,7 @@ import type { AppUser, OpenAuthFn, UserRole } from './types'
 import { supabase } from './lib/supabase'
 import { identifyOneSignalUser, resetOneSignalUser } from './lib/onesignal'
 
-import { AmbientBackground }      from './components/ui/AmbientBackground'
+import { HexBackground }          from './components/ui/HexBackground'
 import { ScissorsBackdrop }       from './components/ui/ScissorsBackdrop'
 import { SnipScissors }           from './components/ui/SnipScissors'
 import { Preloader }              from './components/ui/Preloader'
@@ -277,7 +277,7 @@ export default function App() {
   return (
     <div className="min-h-screen text-white relative"
       style={{ fontFamily: "'DM Sans', sans-serif", background: '#050505' }}>
-      <AmbientBackground />
+      <HexBackground />
       <ScissorsBackdrop />
 
       {/* Mobile header */}

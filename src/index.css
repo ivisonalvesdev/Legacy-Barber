@@ -77,6 +77,19 @@ button, input, textarea, select { font: inherit; }
   100% { background-position:  200% center; }
 }
 
+/* ── Grão animado do fundo de hexágonos (HexBackground) ──── */
+@keyframes hexgrain {
+  0%   { background-position:   0px   0px; }
+  20%  { background-position: 128px  64px; }
+  40%  { background-position:  64px 200px; }
+  60%  { background-position: 200px  32px; }
+  80%  { background-position:  32px 160px; }
+  100% { background-position:   0px   0px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fixed [style*="hexgrain"] { animation: none !important; }
+}
+
 /* ── Tesoura com movimento de corte (SnipScissors) ───────
    Cada metade da tesoura gira em torno do parafuso (12,12 no viewBox),
    em sentidos opostos — as lâminas abrem e fecham como um corte real.

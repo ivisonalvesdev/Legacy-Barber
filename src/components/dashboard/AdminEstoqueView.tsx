@@ -4,6 +4,8 @@ import { Package, Plus, Search, AlertTriangle, X, Check, Trash2 } from 'lucide-r
 import type { AppUser, Product } from '../../types'
 import { PRODUCT_CATEGORIES } from '../../data/defaults'
 import { supabase } from '../../lib/supabase'
+import { useRealtimeRefresh } from '../../lib/useRealtimeRefresh'
+import { LiveBadge } from '../ui/LiveBadge'
 
 interface AdminEstoqueViewProps {
   user: AppUser
@@ -85,6 +87,14 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
 
   useEffect(() => { load() }, [load])
 
+  // Tempo real: o estoque atualiza sozinho quando um barbeiro dá baixa de insumo
+  // (ou quando outro dispositivo ajusta as quantidades).
+  const live = useRealtimeRefresh(
+    user.barbershopId ? `admin-estoque-${user.barbershopId}` : null,
+    [{ table: 'products', filter: `barbershop_id=eq.${user.barbershopId}` }],
+    load,
+  )
+
   const adjust = async (item: Product, delta: number) => {
     const qty = getQty(item.id)
     const newStock = Math.max(0, Math.min(item.maxStock, item.stock + delta * qty))
@@ -154,9 +164,12 @@ export function AdminEstoqueView({ user }: AdminEstoqueViewProps) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
-            Estoque
-          </h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
+              Estoque
+            </h1>
+            <LiveBadge live={live} />
+          </div>
           <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             {inv.length} produtos · Valor em estoque: R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>

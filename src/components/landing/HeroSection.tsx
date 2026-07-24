@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { AmbientBackground } from '../ui/AmbientBackground'
 import { TechGrid } from '../ui/TechGrid'
 import { FloatingParticles } from '../ui/FloatingParticles'
 import { FloatingScissors } from '../ui/FloatingScissors'
@@ -14,7 +13,6 @@ interface HeroSectionProps {
 export function HeroSection({ onOpenAuth }: HeroSectionProps) {
   return (
     <section className="relative min-h-screen flex items-center pt-24 pb-14 md:pt-28 md:pb-20 px-4 md:px-8 overflow-hidden">
-      <AmbientBackground />
       <TechGrid />
       <FloatingParticles />
       <FloatingScissors />

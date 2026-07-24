@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Download,
@@ -6,7 +6,9 @@ import {
 } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
+import { useRealtimeRefresh } from '../../lib/useRealtimeRefresh'
 import { Avatar } from '../ui/Avatar'
+import { LiveBadge } from '../ui/LiveBadge'
 
 interface AdminRelatoriosViewProps {
   user: AppUser
@@ -238,14 +240,13 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
   const [topBarbers, setTopBarbers] = useState<TopBarber[]>([])
   const [svcDist, setSvcDist]       = useState<SvcDist[]>([])
 
-  const now = new Date()
-  const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  const monthLabel = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!user.barbershopId) { setLoading(false); return }
     const shopId = user.barbershopId
-
-    const load = async () => {
+    const now = new Date()
+    {
       try {
       // Janela única de 6 meses — tudo é agregado aqui no cliente
       const start6m    = new Date(now.getFullYear(), now.getMonth() - 5, 1)
@@ -421,10 +422,21 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
         setLoading(false)
       }
     }
-
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.barbershopId])
+
+  useEffect(() => { load() }, [load])
+
+  // Tempo real: os relatórios recalculam quando entram atendimentos,
+  // movimentações de estoque ou ajustes de produto (+ polling de reserva).
+  const live = useRealtimeRefresh(
+    user.barbershopId ? `admin-relatorios-${user.barbershopId}` : null,
+    [
+      { table: 'bookings',        filter: `barbershop_id=eq.${user.barbershopId}` },
+      { table: 'stock_movements', filter: `barbershop_id=eq.${user.barbershopId}` },
+      { table: 'products',        filter: `barbershop_id=eq.${user.barbershopId}` },
+    ],
+    load,
+  )
 
   const chartData  = period === 'semana' ? weekChart : monthChart
   const chartTotal = period === 'semana' ? totals.week : totals.month
@@ -441,9 +453,12 @@ export function AdminRelatoriosView({ user }: AdminRelatoriosViewProps) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
-            Relatórios
-          </h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
+              Relatórios
+            </h1>
+            <LiveBadge live={live} />
+          </div>
           <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             Visão geral de desempenho — {monthLabel}
           </p>

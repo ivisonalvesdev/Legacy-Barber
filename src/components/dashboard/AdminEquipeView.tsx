@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Plus, X, TrendingUp, Clock, Scissors, Copy, CheckCheck, Crown } from 'lucide-react'
 import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
 import { ratingFromLikes } from '../../lib/rating'
+import { useRealtimeRefresh } from '../../lib/useRealtimeRefresh'
 import { Avatar } from '../ui/Avatar'
+import { LiveBadge } from '../ui/LiveBadge'
 
 interface AdminEquipeViewProps {
   user: AppUser
@@ -35,10 +37,9 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
   const todayISO = new Date().toISOString().split('T')[0]
 
   // ── Carrega equipe + código de convite ───────────────────────
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!user.barbershopId) { setLoading(false); return }
-
-    const load = async () => {
+    {
       try {
         const [shopRes, membersRes, bookingsRes, likesRes] = await Promise.all([
           // Código de convite — via RPC: a coluna é revogada na tabela para não
@@ -100,9 +101,20 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
         setLoading(false)
       }
     }
-
-    load()
   }, [user.barbershopId, todayISO])
+
+  useEffect(() => { load() }, [load])
+
+  // Tempo real: os números da equipe atualizam sozinhos; entrada/ativação de
+  // barbeiro (profiles) também recarrega a lista.
+  const live = useRealtimeRefresh(
+    user.barbershopId ? `admin-equipe-${user.barbershopId}` : null,
+    [
+      { table: 'bookings', filter: `barbershop_id=eq.${user.barbershopId}` },
+      { table: 'profiles', filter: `barbershop_id=eq.${user.barbershopId}` },
+    ],
+    load,
+  )
 
   const copyCode = () => {
     navigator.clipboard.writeText(inviteCode)
@@ -131,9 +143,12 @@ export function AdminEquipeView({ user }: AdminEquipeViewProps) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
-            Equipe
-          </h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
+              Equipe
+            </h1>
+            <LiveBadge live={live} />
+          </div>
           <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             {active.length} profissiona{active.length !== 1 ? 'is' : 'l'} ativo{active.length !== 1 ? 's' : ''} — incluindo você
           </p>

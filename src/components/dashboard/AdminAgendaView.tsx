@@ -5,7 +5,9 @@ import type { AppUser } from '../../types'
 import { supabase } from '../../lib/supabase'
 import { TiltCard } from '../ui/TiltCard'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { LiveBadge } from '../ui/LiveBadge'
 import { NewBookingModal } from './NewBookingModal'
+import { useRealtimeRefresh } from '../../lib/useRealtimeRefresh'
 
 interface AdminAgendaViewProps {
   user: AppUser
@@ -73,6 +75,14 @@ export function AdminAgendaView({ user }: AdminAgendaViewProps) {
 
   useEffect(() => { load() }, [load])
 
+  // Tempo real: a agenda se atualiza sozinha quando um cliente agenda, um corte
+  // é concluído ou cancelado (+ polling de reserva).
+  const live = useRealtimeRefresh(
+    user.barbershopId ? `admin-agenda-${user.barbershopId}` : null,
+    [{ table: 'bookings', filter: `barbershop_id=eq.${user.barbershopId}` }],
+    load,
+  )
+
   const markDone = async (item: AgendaItem) => {
     const { error } = await supabase.from('bookings').update({ status: 'done' }).eq('id', item.id)
     if (error) return
@@ -101,9 +111,12 @@ export function AdminAgendaView({ user }: AdminAgendaViewProps) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,5.5vw,34px)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
-            {greeting}, {user.name.split(' ')[0]}
-          </h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,5.5vw,34px)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
+              {greeting}, {user.name.split(' ')[0]}
+            </h1>
+            <LiveBadge live={live} />
+          </div>
           <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             {today.charAt(0).toUpperCase() + today.slice(1)}
             <span style={{ color: 'rgba(212,175,55,0.5)', marginLeft: '8px' }}>· {user.barbershopName || 'Sua barbearia'}</span>

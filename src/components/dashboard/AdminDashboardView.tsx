@@ -5,8 +5,10 @@ import type { AppUser } from '../../types'
 import { StatCard }        from '../ui/StatCard'
 import { RevenueChart }    from './RevenueChart'
 import { NewBookingModal } from './NewBookingModal'
+import { LiveBadge }       from '../ui/LiveBadge'
 import { TIME_SLOTS }      from '../../data/defaults'
 import { supabase }        from '../../lib/supabase'
+import { useRealtimeRefresh } from '../../lib/useRealtimeRefresh'
 
 interface AdminDashboardViewProps { user: AppUser }
 
@@ -184,6 +186,14 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
 
   useEffect(() => { load() }, [load])
 
+  // Tempo real: recarrega os números a cada mudança em bookings da barbearia
+  // (+ polling de reserva). Pensado para uma TV na barbearia.
+  const live = useRealtimeRefresh(
+    user.barbershopId ? `admin-dash-${user.barbershopId}` : null,
+    [{ table: 'bookings', filter: `barbershop_id=eq.${user.barbershopId}` }],
+    load,
+  )
+
   const totalChart = revenueData.reduce((s, p) => s + p.value, 0)
 
   return (
@@ -191,9 +201,12 @@ export function AdminDashboardView({ user }: AdminDashboardViewProps) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
-            Dashboard
-          </h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px,6vw,38px)', fontWeight: 700, color: 'white', lineHeight: 1.05 }}>
+              Dashboard
+            </h1>
+            <LiveBadge live={live} />
+          </div>
           <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
             {todayLabel.charAt(0).toUpperCase() + todayLabel.slice(1)} · {user.barbershopName || 'Legacy Barber'}
           </p>

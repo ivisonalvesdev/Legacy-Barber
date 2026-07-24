@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Calendar, Clock, Scissors, XCircle, Heart } from 'lucide-react'
 import type { AppUser, BookingStatus } from '../../types'
 import { supabase } from '../../lib/supabase'
+import { useRealtimeRefresh } from '../../lib/useRealtimeRefresh'
+import { LiveBadge } from '../ui/LiveBadge'
 
 interface ClientBookingsViewProps {
   user: AppUser
@@ -38,9 +40,8 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
   const [liked, setLiked]         = useState<Set<string>>(new Set())   // ids de cortes já curtidos
   const [liking, setLiking]       = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
+  const load = useCallback(async () => {
+    try {
       const [{ data }, { data: likes }] = await Promise.all([
         supabase
           .from('bookings')
@@ -50,7 +51,6 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
           .order('time', { ascending: false }),
         supabase.from('booking_likes').select('booking_id').eq('client_id', user.id),
       ])
-      if (cancelled) return
       type Row = {
         id: string; date: string; time: string; service_name: string
         service_price: number | string; status: string
@@ -67,11 +67,20 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
         status:   b.status as BookingStatus,
       })))
       setLiked(new Set(((likes ?? []) as { booking_id: string }[]).map(l => l.booking_id)))
+    } finally {
       setLoading(false)
     }
-    load().catch(() => { if (!cancelled) { setBookings([]); setLoading(false) } })
-    return () => { cancelled = true }
   }, [user.id])
+
+  useEffect(() => { load() }, [load])
+
+  // Tempo real: se o barbeiro concluir ou cancelar o corte, o status muda aqui
+  // na hora (e o botão "Curtir corte" aparece assim que fica concluído).
+  const live = useRealtimeRefresh(
+    `client-bookings-${user.id}`,
+    [{ table: 'bookings', filter: `client_id=eq.${user.id}` }],
+    load,
+  )
 
   const like = async (b: Booking) => {
     if (!b.barberId || liked.has(b.id)) return
@@ -177,9 +186,12 @@ export function ClientBookingsView({ user }: ClientBookingsViewProps) {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '30px', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
-          Meus Agendamentos
-        </h1>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '30px', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
+            Meus Agendamentos
+          </h1>
+          <LiveBadge live={live} />
+        </div>
         <p style={{ color: 'rgba(113,113,122,0.68)', fontSize: '13px', marginTop: '4px' }}>
           Acompanhe e gerencie seus horários
         </p>

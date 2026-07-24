@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
 import { Scissors, ArrowRight } from 'lucide-react'
 import { TechGrid } from '../ui/TechGrid'
-import { AmbientBackground } from '../ui/AmbientBackground'
 import { FloatingScissors } from '../ui/FloatingScissors'
 import type { OpenAuthFn } from '../../types'
 
@@ -13,7 +12,6 @@ export function CTASection({ onOpenAuth }: CTASectionProps) {
   return (
     <section className="relative z-[1] py-16 md:py-28 px-4 md:px-8 overflow-hidden">
       <TechGrid />
-      <AmbientBackground />
       <FloatingScissors variant="cta" />
       <div className="max-w-3xl mx-auto text-center relative z-10 wide-zoom">
         <motion.div
