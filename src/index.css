@@ -46,6 +46,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 button, input, textarea, select { font: inherit; }
 
+/* ── Legibilidade sobre o fundo em vídeo ─────────────────
+   Sombra bem leve em todo o texto para destacá-lo do favo dourado sem pesar.
+   O texto com gradiente dourado (fill transparente) fica de fora — nele a
+   sombra viraria um fantasma escuro atrás das letras. */
+body { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.30); }
+.text-gold-gradient { text-shadow: none; }
+
 /* ── Utilities ─────────────────────────────────────────── */
 @layer utilities {
   .glass {

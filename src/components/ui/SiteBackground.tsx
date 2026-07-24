@@ -60,10 +60,27 @@ export function SiteBackground() {
           }} />
       )}
 
-      {/* Véu sutil no topo e na base — mantém a leitura confortável sobre os
-          cantos iluminados sem apagar o brilho do favo. */}
+      {/* Máscara escura uniforme — abaixa o brilho do vídeo por igual para o
+          texto de todas as telas (o fundo é fixo atrás do app inteiro) ler bem. */}
+      <div className="absolute inset-0" style={{ background: 'rgba(5,5,5,0.35)' }} />
+
+      {/* Véu no topo e na base — reforça a leitura nas bordas iluminadas. */}
       <div className="absolute inset-0"
-        style={{ background: 'linear-gradient(180deg, rgba(5,5,5,0.45) 0%, rgba(5,5,5,0.12) 22%, rgba(5,5,5,0.12) 74%, rgba(5,5,5,0.5) 100%)' }} />
+        style={{ background: 'linear-gradient(180deg, rgba(5,5,5,0.5) 0%, rgba(5,5,5,0.15) 22%, rgba(5,5,5,0.15) 74%, rgba(5,5,5,0.55) 100%)' }} />
+
+      {/* Cobre a marca d'água da IA no canto inferior direito do vídeo. É uma
+          "vinheta" de canto: opaca bem na quina e some suave para dentro, então
+          parece parte do fundo, não um retângulo colado. Só no vídeo — os frames
+          estáticos são nossos e não têm marca d'água. */}
+      {showVideo && (
+        <div className="absolute bottom-0 right-0"
+          style={{
+            width: 'min(40vw, 400px)',
+            height: 'min(26vh, 200px)',
+            background:
+              'radial-gradient(130% 100% at 100% 100%, rgba(5,5,5,0.97) 0%, rgba(5,5,5,0.85) 22%, rgba(5,5,5,0.5) 42%, rgba(5,5,5,0) 65%)',
+          }} />
+      )}
     </div>
   )
 }
